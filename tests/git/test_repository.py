@@ -88,7 +88,7 @@ def test_stage_uses_repository_root_and_relative_path(tmp_path: Path) -> None:
 
     assert client.run.call_args_list == [
         call(["rev-parse", "--show-toplevel"], cwd=tmp_path),
-        call("add", "--", Path("nested/file.txt"), cwd=root),
+        call(["add", "--", "nested/file.txt"], cwd=root),
     ]
 
 
@@ -217,3 +217,21 @@ def test_operation_precedence_is_rebase_then_cherry_pick_then_revert_then_merge(
 
     (tmp_path / "rebase-merge").mkdir()
     assert GitRepository(client).operation(tmp_path) is expected
+
+
+def test_stage_adds_a_real_file_to_a_real_index(tmp_path: Path) -> None:
+    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    (nested / "file.txt").write_text("content\n", encoding="utf-8")
+
+    GitRepository().stage(Path("nested/file.txt"), cwd=tmp_path)
+
+    staged = subprocess.run(
+        ["git", "diff", "--cached", "--name-only"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert staged.stdout.splitlines() == ["nested/file.txt"]

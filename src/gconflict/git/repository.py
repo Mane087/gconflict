@@ -73,7 +73,7 @@ class GitRepository:
         """Stage ``path`` relative to its repository root."""
         root = self.root(cwd)
         relative_path = _confined_relative_path(root, path)
-        self.client.run("add", "--", relative_path, cwd=root)
+        self.client.run(["add", "--", str(relative_path)], cwd=root)
 
     def operation(self, cwd: str | Path | None = None) -> GitOperation:
         """Return the Git operation currently in progress in ``cwd``."""
