@@ -20,6 +20,7 @@ from gconflict.services.editor_service import EditorService
 from gconflict.ui.tokens import TokenApp
 from gconflict.ui.widgets.action_bar import Action, ActionBar
 from gconflict.ui.widgets.conflict_panes import ConflictPanes
+from gconflict.ui.widgets.conflict_rail import ConflictRail
 from gconflict.ui.widgets.file_sidebar import FileSidebar, SidebarEntry
 from gconflict.ui.widgets.file_tabs import FileTabs, tab_entries
 from gconflict.ui.widgets.repository_header import RepositoryHeader
@@ -80,6 +81,7 @@ class GConflictApp(TokenApp):
         with Horizontal(id="body"):
             yield FileSidebar()
             with Vertical(id="editor"):
+                yield ConflictRail()
                 yield ConflictPanes()
                 yield ResultPane()
         yield StatusLine()
@@ -115,6 +117,7 @@ class GConflictApp(TokenApp):
             self.query_one(StatusLine).show(StatusKind.BLOCKED, title, detail)
             self.query_one(ConflictPanes).clear()
             self.query_one(ResultPane).clear()
+            self.query_one(ConflictRail).clear()
             self._refresh_actions()
             return
         root = self.service.root(self.cwd)
@@ -153,9 +156,9 @@ class GConflictApp(TokenApp):
         return SidebarEntry(item.file.path, "*", f"{item.total} sin resolver")
 
     def _selected_index(self) -> int | None:
-        """Return the position of the selected file, if any."""
+        """Return the position of the selected file, highlighting the first by default."""
         if self.selected_file is None:
-            return None
+            return 0 if self._progress else None
         for position, item in enumerate(self._progress):
             if item.file.path == self.selected_file.path:
                 return position
@@ -263,12 +266,20 @@ class GConflictApp(TokenApp):
         """Render the active conflict into the panes and the result preview."""
         panes = self.query_one(ConflictPanes)
         result = self.query_one(ResultPane)
+        rail = self.query_one(ConflictRail)
         if not self.loaded_conflicts or self._repo_context is None:
             panes.clear()
             result.clear()
+            rail.clear()
             return
 
         conflict = self.loaded_conflicts[self.active_conflict_index]
+        assert self.selected_file is not None
+        rail.show(
+            self.active_conflict_index,
+            self.resolutions,
+            f"{self.selected_file.path}:{conflict.start_line}",
+        )
         panes.show(
             conflict,
             self.resolutions[self.active_conflict_index],
