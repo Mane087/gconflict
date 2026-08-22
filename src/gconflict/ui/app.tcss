@@ -1,0 +1,40 @@
+/* Design tokens. Every widget reads colors from here, never inline. */
+$surface-0: #0b0d12;
+$surface-1: #10131a;
+$surface-2: #12151d;
+$surface-3: #1c202b;
+$line: #272c39;
+
+$text-1: #d6dae3;
+$text-2: #a4abba;
+$text-3: #79808f;
+$text-4: #4d5462;
+$text-5: #343b48;
+
+$current: #e8a44c;
+$current-bg: #241c10;
+$current-line: #8a6b34;
+$current-text: #f0d3a4;
+
+$incoming: #4ca8e8;
+$incoming-bg: #10202c;
+$incoming-line: #35708f;
+$incoming-text: #a8d6f5;
+
+$ok: #6fbf73;
+$danger: #d9645f;
+
+Screen {
+    background: $surface-0;
+    color: $text-1;
+    layout: vertical;
+}
+
+.-muted { color: $text-3; }
+.-dim { color: $text-4; }
+.-ok { color: $ok; }
+.-danger { color: $danger; }
+.-current { color: $current; }
+.-incoming { color: $incoming; }
+.-disabled { text-style: dim; }
+.-keycap { color: $text-3; background: $surface-3; }
