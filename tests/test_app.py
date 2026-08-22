@@ -755,3 +755,74 @@ async def test_edit_with_no_editor_does_not_reload_or_mutate() -> None:
             "! No encontre un editor\n  define GIT_EDITOR, VISUAL o EDITOR"
         )
         assert service.mutation_calls == []
+
+
+async def test_unsupported_file_explains_itself_and_keeps_only_the_editor() -> None:
+    service = FakeConflictService(
+        [ConflictedFile(Path("priv/logo.png"), ConflictType.ADD_ADD)]
+    )
+    app = GConflictApp(service=service, cwd="/workspace/subdirectory")
+
+    async with app.run_test() as pilot:
+        await pilot.press("enter")
+        assert app.screen.query_one(StatusLine).rendered_text == (
+            "! Conflicto add_add - no soportado\n"
+            "  1 compara las dos versiones fuera - "
+            "2 deja la que quieras - 3 vuelve y marca resuelto"
+        )
+        bar = app.screen.query_one(ActionBar).rendered_text
+        assert "[e] Editor externo" in bar
+        assert "[s] Save - tipo de conflicto no soportado" in bar
+        assert app.screen.query_one(ConflictPanes).current_text == ""
+        assert app.screen.query_one(ConflictRail).rendered_text == ""
+        assert service.mutation_calls == []
+
+
+async def test_unsupported_file_blocks_every_resolution_key() -> None:
+    service = FakeConflictService(
+        [ConflictedFile(Path("priv/logo.png"), ConflictType.MODIFY_DELETE)]
+    )
+    app = GConflictApp(service=service, cwd="/workspace/subdirectory")
+
+    async with app.run_test() as pilot:
+        await pilot.press("enter")
+        for key in ("c", "i", "b", "B", "s", "r"):
+            await pilot.press(key)
+        assert app.resolutions == []
+        assert service.mutation_calls == []
+
+
+async def test_last_resolved_file_reports_the_users_next_step() -> None:
+    service = FakeConflictService([Path("lib/user.ex")])
+    app = GConflictApp(service=service, cwd="/workspace/subdirectory")
+
+    async with app.run_test() as pilot:
+        await pilot.press("enter")
+        await pilot.press("c")
+        await pilot.press("s")
+        service.progress_result = []
+        await pilot.press("r")
+        assert app.screen.query_one(StatusLine).rendered_text == (
+            "+ Todo resuelto - 1 archivo en el index\n"
+            "  gconflict no hace commit: te toca git merge --continue"
+        )
+        assert app.screen.query_one(ActionBar).rendered_text == ""
+        assert service.mark_resolved_calls == [
+            (Path("lib/user.ex"), "/workspace/subdirectory")
+        ]
+
+
+async def test_continue_hint_follows_the_operation() -> None:
+    service = FakeConflictService([Path("lib/user.ex")])
+    service.context_result = RepositoryContext(
+        root=Path("/validated/repository"),
+        name="repository",
+        branch="feature/x",
+        operation=GitOperation.REBASE,
+        current_label="rebased base",
+        incoming_label="commit being applied",
+    )
+    app = GConflictApp(service=service, cwd="/workspace/subdirectory")
+
+    async with app.run_test():
+        assert app._continue_hint() == "git rebase --continue"
