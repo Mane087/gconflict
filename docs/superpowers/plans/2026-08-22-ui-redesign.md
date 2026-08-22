@@ -1875,6 +1875,8 @@ El corazón del artboard principal: dos paneles con número de línea, barra de 
 - Create: `src/gconflict/ui/widgets/conflict_panes.py`
 - Create: `tests/ui/widgets/test_conflict_panes.py`
 
+**Corregido durante la ejecución.** El método privado se llama `_render_side`, no `_render`: `Widget._render` ya existe en Textual y sobrescribirlo revienta el render con `TypeError: _render() missing 1 required positional argument`.
+
 **Interfaces:**
 - Consumes: `Conflict` (`models/conflict.py`), `Resolution`, `RepositoryContext` (Tarea 4).
 - Produces:
@@ -2055,7 +2057,7 @@ class ConflictPanes(Horizontal):
         """Render one conflict and mark the sides the resolution keeps."""
         # The marker line itself is start_line, so content starts one line later.
         first_line = conflict.start_line + 1
-        self._render(
+        self._render_side(
             "current",
             glyph="*",
             title="CURRENT",
@@ -2067,7 +2069,7 @@ class ConflictPanes(Horizontal):
             gutter="#8a6b34",
             body="#f0d3a4",
         )
-        self._render(
+        self._render_side(
             "incoming",
             glyph="o",
             title="INCOMING",
@@ -2089,7 +2091,7 @@ class ConflictPanes(Horizontal):
             self.query_one(f"#body-{side}", Static).update("")
             self.query_one(f"#pane-{side}").remove_class("-selected")
 
-    def _render(
+    def _render_side(
         self,
         side: str,
         *,
