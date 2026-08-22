@@ -190,3 +190,45 @@ def test_context_composes_repository_state_into_labels() -> None:
     assert context.current_label == "ours - feature/user-status"
     assert context.incoming_label == "theirs - main"
     repository.root.assert_called_once_with("/work/lynxweb/lib")
+
+
+def test_preview_resolution_returns_text_without_touching_disk(tmp_path: Path) -> None:
+    path = tmp_path / "file.txt"
+    path.write_text(
+        "before\n<<<<<<< HEAD\nours\n=======\ntheirs\n>>>>>>> main\nafter\n",
+        encoding="utf-8",
+    )
+    service = ConflictService(Mock())
+    snapshot, conflicts = service.load_conflicts(path)
+
+    text = service.preview_resolution(snapshot, conflicts, [Resolution.INCOMING])
+
+    assert text == "before\ntheirs\nafter\n"
+    assert path.read_text(encoding="utf-8") == (
+        "before\n<<<<<<< HEAD\nours\n=======\ntheirs\n>>>>>>> main\nafter\n"
+    )
+
+
+def test_preview_resolution_rejects_mismatched_lengths(tmp_path: Path) -> None:
+    path = tmp_path / "file.txt"
+    path.write_text("<<<<<<< HEAD\nours\n=======\ntheirs\n>>>>>>> main\n", encoding="utf-8")
+    service = ConflictService(Mock())
+    snapshot, conflicts = service.load_conflicts(path)
+
+    with pytest.raises(ValueError, match="same length"):
+        service.preview_resolution(snapshot, conflicts, [])
+
+
+def test_resolve_file_writes_exactly_what_preview_returned(tmp_path: Path) -> None:
+    path = tmp_path / "file.txt"
+    path.write_text(
+        "<<<<<<< HEAD\nours\n=======\ntheirs\n>>>>>>> main\n", encoding="utf-8"
+    )
+    service = ConflictService(Mock())
+    snapshot, conflicts = service.load_conflicts(path)
+    expected = service.preview_resolution(snapshot, conflicts, [Resolution.CURRENT])
+
+    saved = service.resolve_file(snapshot, conflicts, [Resolution.CURRENT])
+
+    assert saved.text == expected
+    assert path.read_text(encoding="utf-8") == expected

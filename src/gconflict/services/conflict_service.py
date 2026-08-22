@@ -87,14 +87,14 @@ class ConflictService:
         snapshot = load_text_file(path)
         return snapshot, parse_conflicts(snapshot.text)
 
-    def resolve_file(
+    def preview_resolution(
         self,
         snapshot: TextFileSnapshot,
         conflicts: Sequence[Conflict],
         resolutions: Sequence[Resolution],
         manual: Sequence[list[str] | None] | None = None,
-    ) -> TextFileSnapshot:
-        """Resolve, reconstruct, and save a previously loaded snapshot."""
+    ) -> str:
+        """Reconstruct the resolved text in memory without writing anything."""
         if len(conflicts) != len(resolutions):
             raise ValueError("conflicts and resolutions must have the same length")
         if manual is not None and len(manual) != len(conflicts):
@@ -109,5 +109,15 @@ class ConflictService:
             manual_content = None if manual is None else manual[expected_index]
             resolved.append(resolve_conflict(conflict, resolution, manual_content))
 
-        text = reconstruct_text(snapshot.text, conflicts, resolved)
+        return reconstruct_text(snapshot.text, conflicts, resolved)
+
+    def resolve_file(
+        self,
+        snapshot: TextFileSnapshot,
+        conflicts: Sequence[Conflict],
+        resolutions: Sequence[Resolution],
+        manual: Sequence[list[str] | None] | None = None,
+    ) -> TextFileSnapshot:
+        """Resolve, reconstruct, and save a previously loaded snapshot."""
+        text = self.preview_resolution(snapshot, conflicts, resolutions, manual)
         return save_text_file(snapshot, text)
