@@ -2616,7 +2616,7 @@ Añadir a la clase, junto a `TITLE` y `BINDINGS`:
 Añadir al `__init__`, después de `self._editor_worker`:
 
 ```python
-        self._context: RepositoryContext | None = None
+        self._repo_context: RepositoryContext | None = None
         self._progress: list[FileProgress] = []
         self._resolved_paths: set[Path] = set()
 ```
@@ -2637,10 +2637,10 @@ Sustituir `compose` entero por:
 
     def on_mount(self) -> None:
         """Load repository state once the widgets exist."""
-        self._context = self.service.context(self.cwd)
+        self._repo_context = self.service.context(self.cwd)
         self._progress = self.service.file_progress(self.cwd)
         self._conflicted_files = [item.file for item in self._progress]
-        self.query_one(RepositoryHeader).set_context(self._context)
+        self.query_one(RepositoryHeader).set_context(self._repo_context)
         self._refresh_view()
         # Tabs would otherwise take the initial focus and swallow enter/arrows.
         self.query_one(FileSidebar).query_one(ListView).focus()
@@ -2756,7 +2756,7 @@ Sustituir `_render_active_conflict` entero por:
         """Render the active conflict into the panes and the result preview."""
         panes = self.query_one(ConflictPanes)
         result = self.query_one(ResultPane)
-        if not self.loaded_conflicts or self._context is None:
+        if not self.loaded_conflicts or self._repo_context is None:
             panes.clear()
             result.clear()
             return
@@ -2765,8 +2765,8 @@ Sustituir `_render_active_conflict` entero por:
         panes.show(
             conflict,
             self.resolutions[self.active_conflict_index],
-            self._context.current_label,
-            self._context.incoming_label,
+            self._repo_context.current_label,
+            self._repo_context.incoming_label,
         )
 
         if any(resolution is None for resolution in self.resolutions):
@@ -3123,7 +3123,7 @@ Sustituir el stub de `_report_all_resolved` que dejó la Tarea 14 por la versió
 
     def _continue_hint(self) -> str:
         """Name the command the user must run; gconflict never runs it."""
-        operation = self._context.operation if self._context else GitOperation.NONE
+        operation = self._repo_context.operation if self._repo_context else GitOperation.NONE
         return self._CONTINUE_COMMANDS[operation]
 
     def _report_all_resolved(self, staged: int) -> None:

@@ -9,6 +9,16 @@ from gconflict import __version__
 from gconflict.app import GConflictApp, Resolution, main
 from gconflict.models.resolution import Resolution as CanonicalResolution
 from gconflict.models.conflicted_file import ConflictedFile, ConflictType
+from gconflict.git.operation import GitOperation
+from gconflict.models.file_progress import FileProgress
+from gconflict.models.repository_context import RepositoryContext
+from gconflict.ui.widgets.action_bar import ActionBar
+from gconflict.ui.widgets.conflict_panes import ConflictPanes
+from gconflict.ui.widgets.file_sidebar import FileSidebar
+from gconflict.ui.widgets.file_tabs import FileTabs
+from gconflict.ui.widgets.repository_header import RepositoryHeader
+from gconflict.ui.widgets.result_pane import ResultPane
+from gconflict.ui.widgets.status_line import StatusLine
 
 
 def test_package_and_entrypoint() -> None:
@@ -106,8 +116,26 @@ class FakeConflictService:
         self.validated_root = Path("/validated/repository")
         self.loaded = (
             "snapshot",
-            [SimpleNamespace(current=["ours\n"], incoming=["theirs\n"])],
+            [
+                SimpleNamespace(
+                    current=["ours\n"],
+                    incoming=["theirs\n"],
+                    index=0,
+                    start_line=1,
+                    end_line=5,
+                )
+            ],
         )
+        self.context_result = RepositoryContext(
+            root=Path("/validated/repository"),
+            name="repository",
+            branch="feature/x",
+            operation=GitOperation.MERGE,
+            current_label="ours - feature/x",
+            incoming_label="theirs - main",
+        )
+        self.progress_result: list[FileProgress] | None = None
+        self.preview_result = "preview text\n"
 
     def root(self, cwd: str | Path | None) -> Path:
         self.calls.append(("root", Path(cwd) if cwd is not None else None))
@@ -120,6 +148,25 @@ class FakeConflictService:
     def load_conflicts(self, path: Path) -> tuple[object, list[object]]:
         self.calls.append(("load_conflicts", path))
         return self.loaded
+
+    def context(self, cwd: str | Path | None = None) -> RepositoryContext:
+        self.calls.append(("context", Path(cwd) if cwd is not None else None))
+        return self.context_result
+
+    def file_progress(self, cwd: str | Path | None = None) -> list[FileProgress]:
+        self.calls.append(("file_progress", Path(cwd) if cwd is not None else None))
+        if self.progress_result is not None:
+            return self.progress_result
+        return [FileProgress(conflict, 1) for conflict in self.conflicts]
+
+    def preview_resolution(
+        self,
+        snapshot: object,
+        conflicts: list[object],
+        resolutions: list[Resolution | None],
+        manual: object = None,
+    ) -> str:
+        return self.preview_result
 
     def resolve(self, *args: object, **kwargs: object) -> None:
         self.mutation_calls.append("resolve")
