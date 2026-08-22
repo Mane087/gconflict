@@ -1,6 +1,6 @@
 # Rediseño de la UI de gconflict — Plan de implementación
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Reemplazar la UI actual de `GConflictApp` (una `ListView` y tres `Label`) por la dirección A del rediseño: tabs de archivos, sidebar con progreso, editor a dos paneles con vista previa del resultado, y un panel de acciones agrupado por ámbito.
 
@@ -129,17 +129,17 @@ Hoy `.venv/bin/python -m pytest -q` reporta `25 failed, 92 passed`: todos los te
 - Consumes: nada.
 - Produces: `.venv/bin/python -m pytest` corre la suite completa sin flags extra. Todas las tareas siguientes dependen de ello.
 
-- [ ] **Step 1: Confirmar el fallo actual**
+- [x] **Step 1: Confirmar el fallo actual**
 
 Run: `.venv/bin/python -m pytest -q 2>&1 | tail -3`
 Expected: `25 failed, 92 passed`
 
-- [ ] **Step 2: Confirmar que la causa es la configuración, no el código**
+- [x] **Step 2: Confirmar que la causa es la configuración, no el código**
 
 Run: `.venv/bin/python -m pytest -q --asyncio-mode=auto 2>&1 | tail -3`
 Expected: `117 passed`
 
-- [ ] **Step 3: Declarar la dependencia y la configuración**
+- [x] **Step 3: Declarar la dependencia y la configuración**
 
 En `pyproject.toml`, sustituir el bloque `[project.optional-dependencies]` por:
 
@@ -160,12 +160,12 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 ```
 
-- [ ] **Step 4: Verificar que ahora pasa sin flags**
+- [x] **Step 4: Verificar que ahora pasa sin flags**
 
 Run: `.venv/bin/python -m pytest -q 2>&1 | tail -3`
 Expected: `117 passed`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pyproject.toml
@@ -188,7 +188,7 @@ La tarea añade primero un test contra Git real —el que sí lo habría cazado�
 - Consumes: `GitClient.run(args: Sequence[str], *, cwd, check) -> GitResult`.
 - Produces: `GitRepository.stage(path, cwd=None) -> None` funcionando contra Git real. La Tarea 16 depende de ello.
 
-- [ ] **Step 1: Escribir el test de integración que falla**
+- [x] **Step 1: Escribir el test de integración que falla**
 
 Añadir a `tests/git/test_repository.py`:
 
@@ -211,12 +211,12 @@ def test_stage_adds_a_real_file_to_a_real_index(tmp_path: Path) -> None:
     assert staged.stdout.splitlines() == ["nested/file.txt"]
 ```
 
-- [ ] **Step 2: Ejecutarlo y ver el fallo real**
+- [x] **Step 2: Ejecutarlo y ver el fallo real**
 
 Run: `.venv/bin/python -m pytest tests/git/test_repository.py::test_stage_adds_a_real_file_to_a_real_index -v`
 Expected: FAIL con `TypeError: GitClient.run() takes 2 positional arguments but 4 were given`
 
-- [ ] **Step 3: Corregir la llamada**
+- [x] **Step 3: Corregir la llamada**
 
 En `src/gconflict/git/repository.py`, dentro de `stage`, sustituir:
 
@@ -230,7 +230,7 @@ por:
         self.client.run(["add", "--", str(relative_path)], cwd=root)
 ```
 
-- [ ] **Step 4: Actualizar el test con `Mock` para que exija la firma correcta**
+- [x] **Step 4: Actualizar el test con `Mock` para que exija la firma correcta**
 
 En `tests/git/test_repository.py`, dentro de `test_stage_uses_repository_root_and_relative_path`, sustituir la aserción final por:
 
@@ -241,17 +241,17 @@ En `tests/git/test_repository.py`, dentro de `test_stage_uses_repository_root_an
     ]
 ```
 
-- [ ] **Step 5: Verificar los dos tests**
+- [x] **Step 5: Verificar los dos tests**
 
 Run: `.venv/bin/python -m pytest tests/git/test_repository.py -q`
 Expected: PASS, sin fallos
 
-- [ ] **Step 6: Verificar que no se rompió nada más**
+- [x] **Step 6: Verificar que no se rompió nada más**
 
 Run: `.venv/bin/python -m pytest -q 2>&1 | tail -3`
 Expected: `118 passed`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/gconflict/git/repository.py tests/git/test_repository.py
@@ -279,7 +279,7 @@ Reglas: en HEAD desacoplado `current_branch` devuelve `None`, no revienta. `inco
   - `GitRepository.incoming_ref(cwd: str | Path | None = None) -> str | None`
   La Tarea 4 consume ambos.
 
-- [ ] **Step 1: Escribir los tests que fallan**
+- [x] **Step 1: Escribir los tests que fallan**
 
 Añadir a `tests/git/test_repository.py`:
 
@@ -353,12 +353,12 @@ def test_incoming_ref_returns_none_without_an_operation() -> None:
     repository.client.run.assert_not_called()
 ```
 
-- [ ] **Step 2: Ejecutarlos y verificar que fallan**
+- [x] **Step 2: Ejecutarlos y verificar que fallan**
 
 Run: `.venv/bin/python -m pytest tests/git/test_repository.py -q -k "current_branch or incoming_ref"`
 Expected: FAIL con `AttributeError: 'GitRepository' object has no attribute 'current_branch'`
 
-- [ ] **Step 3: Implementar los dos métodos**
+- [x] **Step 3: Implementar los dos métodos**
 
 Añadir a la clase `GitRepository` en `src/gconflict/git/repository.py`, justo después de `root`:
 
@@ -411,12 +411,12 @@ Añadir a la clase `GitRepository` en `src/gconflict/git/repository.py`, justo d
         return short.stdout.strip() or None
 ```
 
-- [ ] **Step 4: Verificar que pasan**
+- [x] **Step 4: Verificar que pasan**
 
 Run: `.venv/bin/python -m pytest tests/git/test_repository.py -q`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/gconflict/git/repository.py tests/git/test_repository.py
@@ -443,7 +443,7 @@ git commit -m "feat: read the current branch and the incoming reference name"
   - `ConflictService.context(cwd: str | Path | None = None) -> RepositoryContext`
   Las Tareas 12 y 14 consumen `RepositoryContext`.
 
-- [ ] **Step 1: Escribir el test del modelo**
+- [x] **Step 1: Escribir el test del modelo**
 
 Crear `tests/models/test_repository_context.py`:
 
@@ -503,12 +503,12 @@ def test_context_names_itself_after_the_repository_root() -> None:
     assert context.operation is GitOperation.MERGE
 ```
 
-- [ ] **Step 2: Ejecutarlo y verificar que falla**
+- [x] **Step 2: Ejecutarlo y verificar que falla**
 
 Run: `.venv/bin/python -m pytest tests/models/test_repository_context.py -q`
 Expected: FAIL con `ModuleNotFoundError: No module named 'gconflict.models.repository_context'`
 
-- [ ] **Step 3: Escribir el modelo**
+- [x] **Step 3: Escribir el modelo**
 
 Crear `src/gconflict/models/repository_context.py`:
 
@@ -553,12 +553,12 @@ class RepositoryContext:
     incoming_label: str
 ```
 
-- [ ] **Step 4: Verificar que el modelo pasa**
+- [x] **Step 4: Verificar que el modelo pasa**
 
 Run: `.venv/bin/python -m pytest tests/models/test_repository_context.py -q`
 Expected: PASS
 
-- [ ] **Step 5: Escribir el test del servicio**
+- [x] **Step 5: Escribir el test del servicio**
 
 Añadir a `tests/services/test_conflict_service.py`:
 
@@ -587,12 +587,12 @@ Y añadir los imports que falten al principio del archivo:
 from gconflict.git.operation import GitOperation
 ```
 
-- [ ] **Step 6: Ejecutarlo y verificar que falla**
+- [x] **Step 6: Ejecutarlo y verificar que falla**
 
 Run: `.venv/bin/python -m pytest tests/services/test_conflict_service.py -q -k context`
 Expected: FAIL con `AttributeError: 'ConflictService' object has no attribute 'context'`
 
-- [ ] **Step 7: Implementar `ConflictService.context`**
+- [x] **Step 7: Implementar `ConflictService.context`**
 
 Añadir el import en `src/gconflict/services/conflict_service.py`:
 
@@ -620,12 +620,12 @@ Y el método, después de `root`:
         )
 ```
 
-- [ ] **Step 8: Verificar la suite completa**
+- [x] **Step 8: Verificar la suite completa**
 
 Run: `.venv/bin/python -m pytest -q 2>&1 | tail -3`
 Expected: PASS, sin fallos
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/gconflict/models/repository_context.py tests/models/test_repository_context.py src/gconflict/services/conflict_service.py tests/services/test_conflict_service.py
@@ -648,7 +648,7 @@ Esta tarea separa las dos responsabilidades. `resolve_file` conserva su firma y 
 - Consumes: `resolve_conflict`, `reconstruct_text`, `TextFileSnapshot`.
 - Produces: `ConflictService.preview_resolution(snapshot, conflicts, resolutions, manual=None) -> str` — devuelve el texto completo del archivo resuelto y **no toca el disco**. La Tarea 13 lo consume.
 
-- [ ] **Step 1: Escribir los tests que fallan**
+- [x] **Step 1: Escribir los tests que fallan**
 
 Añadir a `tests/services/test_conflict_service.py`:
 
@@ -695,12 +695,12 @@ def test_resolve_file_writes_exactly_what_preview_returned(tmp_path: Path) -> No
     assert path.read_text(encoding="utf-8") == expected
 ```
 
-- [ ] **Step 2: Ejecutarlos y verificar que fallan**
+- [x] **Step 2: Ejecutarlos y verificar que fallan**
 
 Run: `.venv/bin/python -m pytest tests/services/test_conflict_service.py -q -k preview`
 Expected: FAIL con `AttributeError: 'ConflictService' object has no attribute 'preview_resolution'`
 
-- [ ] **Step 3: Extraer el método**
+- [x] **Step 3: Extraer el método**
 
 En `src/gconflict/services/conflict_service.py`, sustituir el cuerpo entero de `resolve_file` por estos dos métodos:
 
@@ -741,17 +741,17 @@ En `src/gconflict/services/conflict_service.py`, sustituir el cuerpo entero de `
         return save_text_file(snapshot, text)
 ```
 
-- [ ] **Step 4: Verificar que pasan los nuevos y los viejos**
+- [x] **Step 4: Verificar que pasan los nuevos y los viejos**
 
 Run: `.venv/bin/python -m pytest tests/services/test_conflict_service.py -q`
 Expected: PASS
 
-- [ ] **Step 5: Verificar la suite completa**
+- [x] **Step 5: Verificar la suite completa**
 
 Run: `.venv/bin/python -m pytest -q 2>&1 | tail -3`
 Expected: PASS, sin fallos
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/gconflict/services/conflict_service.py tests/services/test_conflict_service.py
@@ -778,7 +778,7 @@ Los archivos que no son `CONTENT` cuentan `0` y se marcan como no soportados. Un
   - `ConflictService.file_progress(cwd: str | Path | None = None) -> list[FileProgress]`
   Las Tareas 10, 11 y 14 lo consumen.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 Añadir a `tests/services/test_conflict_service.py`:
 
@@ -826,12 +826,12 @@ from gconflict.models.conflicted_file import ConflictedFile, ConflictType
 from gconflict.models.file_progress import FileProgress
 ```
 
-- [ ] **Step 2: Ejecutarlo y verificar que falla**
+- [x] **Step 2: Ejecutarlo y verificar que falla**
 
 Run: `.venv/bin/python -m pytest tests/services/test_conflict_service.py -q -k file_progress`
 Expected: FAIL con `ModuleNotFoundError: No module named 'gconflict.models.file_progress'`
 
-- [ ] **Step 3: Escribir el modelo**
+- [x] **Step 3: Escribir el modelo**
 
 Crear `src/gconflict/models/file_progress.py`:
 
@@ -856,7 +856,7 @@ class FileProgress:
         return self.file.conflict_type is ConflictType.CONTENT
 ```
 
-- [ ] **Step 4: Implementar `ConflictService.file_progress`**
+- [x] **Step 4: Implementar `ConflictService.file_progress`**
 
 Añadir el import en `src/gconflict/services/conflict_service.py`:
 
@@ -888,17 +888,17 @@ Y el método, después de `conflicted_file_descriptors`:
         return progress
 ```
 
-- [ ] **Step 5: Verificar que pasan**
+- [x] **Step 5: Verificar que pasan**
 
 Run: `.venv/bin/python -m pytest tests/services/test_conflict_service.py -q`
 Expected: PASS
 
-- [ ] **Step 6: Verificar la suite completa**
+- [x] **Step 6: Verificar la suite completa**
 
 Run: `.venv/bin/python -m pytest -q 2>&1 | tail -3`
 Expected: PASS, sin fallos
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/gconflict/models/file_progress.py src/gconflict/services/conflict_service.py tests/services/test_conflict_service.py
@@ -933,7 +933,7 @@ Ojo con el empaquetado: `pyproject.toml` usa `setuptools.packages.find`, que **n
   - `TokenApp(App[None])` en el mismo módulo, que los publica vía `get_css_variables()`. **`GConflictApp` y todos los harness de test de widget heredan de ella.**
   - Las variables `$surface-0`…`$danger` y las clases `.-ok`, `.-danger`, `.-current`, `.-incoming`, `.-muted`, `.-dim`, `.-keycap`, `.-disabled`. Todas las tareas siguientes las usan.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 Crear `tests/ui/__init__.py` y `tests/ui/widgets/__init__.py` vacíos, y `tests/ui/test_stylesheet.py`:
 
@@ -983,12 +983,12 @@ async def test_token_app_publishes_the_tokens_as_css_variables() -> None:
         assert variables[name] == value
 ```
 
-- [ ] **Step 2: Ejecutarlo y verificar que falla**
+- [x] **Step 2: Ejecutarlo y verificar que falla**
 
 Run: `.venv/bin/python -m pytest tests/ui/test_stylesheet.py -q`
 Expected: FAIL con `ModuleNotFoundError: No module named 'gconflict.ui'`
 
-- [ ] **Step 3: Crear el paquete, los tokens y la hoja de estilos**
+- [x] **Step 3: Crear el paquete, los tokens y la hoja de estilos**
 
 Crear `src/gconflict/ui/__init__.py`:
 
@@ -1068,7 +1068,7 @@ Screen {
 .-keycap { color: $text-3; background: $surface-3; }
 ```
 
-- [ ] **Step 4: Declarar el package-data**
+- [x] **Step 4: Declarar el package-data**
 
 Añadir al final de `pyproject.toml`:
 
@@ -1077,12 +1077,12 @@ Añadir al final de `pyproject.toml`:
 gconflict = ["ui/*.tcss"]
 ```
 
-- [ ] **Step 5: Verificar que pasa**
+- [x] **Step 5: Verificar que pasa**
 
 Run: `.venv/bin/python -m pytest tests/ui/test_stylesheet.py -q`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/gconflict/ui pyproject.toml tests/ui
@@ -1108,7 +1108,7 @@ El artboard «Panel de opciones», sección 4. Hoy los mensajes son cadenas suel
   - `StatusLine.rendered_text` (propiedad, `str`) para los tests.
   La Tarea 14 la consume.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 Crear `tests/ui/widgets/__init__.py` vacío y `tests/ui/widgets/test_status_line.py`:
 
@@ -1166,12 +1166,12 @@ async def test_clear_removes_text_and_variant() -> None:
         assert not line.has_class("-warning")
 ```
 
-- [ ] **Step 2: Ejecutarlo y verificar que falla**
+- [x] **Step 2: Ejecutarlo y verificar que falla**
 
 Run: `.venv/bin/python -m pytest tests/ui/widgets/test_status_line.py -q`
 Expected: FAIL con `ModuleNotFoundError: No module named 'gconflict.ui.widgets.status_line'`
 
-- [ ] **Step 3: Implementar el widget**
+- [x] **Step 3: Implementar el widget**
 
 Crear `src/gconflict/ui/widgets/status_line.py`:
 
@@ -1251,12 +1251,12 @@ class StatusLine(Static):
         self.update("")
 ```
 
-- [ ] **Step 4: Verificar que pasa**
+- [x] **Step 4: Verificar que pasa**
 
 Run: `.venv/bin/python -m pytest tests/ui/widgets/test_status_line.py -q`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/gconflict/ui/widgets/status_line.py tests/ui/widgets
@@ -1280,7 +1280,7 @@ El artboard «Panel de opciones», secciones 1 y 2. Tres filas: `CONFLICT` (solo
   - `ActionBar(Static)` con `set_actions(actions: Sequence[Action]) -> None` y la propiedad `rendered_text: str`.
   La Tarea 14 la consume.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 Crear `tests/ui/widgets/test_action_bar.py`:
 
@@ -1347,12 +1347,12 @@ async def test_action_bar_rejects_an_unknown_scope() -> None:
             raise AssertionError("set_actions accepted an unknown scope")
 ```
 
-- [ ] **Step 2: Ejecutarlo y verificar que falla**
+- [x] **Step 2: Ejecutarlo y verificar que falla**
 
 Run: `.venv/bin/python -m pytest tests/ui/widgets/test_action_bar.py -q`
 Expected: FAIL con `ModuleNotFoundError: No module named 'gconflict.ui.widgets.action_bar'`
 
-- [ ] **Step 3: Implementar el widget**
+- [x] **Step 3: Implementar el widget**
 
 Crear `src/gconflict/ui/widgets/action_bar.py`:
 
@@ -1440,12 +1440,12 @@ class ActionBar(Static):
             text.append(f" - {action.reason}", style="#4d5462")
 ```
 
-- [ ] **Step 4: Verificar que pasa**
+- [x] **Step 4: Verificar que pasa**
 
 Run: `.venv/bin/python -m pytest tests/ui/widgets/test_action_bar.py -q`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/gconflict/ui/widgets/action_bar.py tests/ui/widgets/test_action_bar.py
@@ -1471,7 +1471,7 @@ La fila de tabs del artboard principal: `● user.ex 2 │ ✓ index.ex │ ○ 
   - `tab_entries(progress: Sequence[FileProgress], resolved_paths: Container[Path]) -> list[TabEntry]` — función pura de módulo.
   La Tarea 14 la consume.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 Crear `tests/ui/widgets/test_file_tabs.py`:
 
@@ -1533,12 +1533,12 @@ async def test_setting_files_twice_replaces_the_previous_tabs() -> None:
         assert tabs.labels == ["o runtime.exs 1"]
 ```
 
-- [ ] **Step 2: Ejecutarlo y verificar que falla**
+- [x] **Step 2: Ejecutarlo y verificar que falla**
 
 Run: `.venv/bin/python -m pytest tests/ui/widgets/test_file_tabs.py -q`
 Expected: FAIL con `ModuleNotFoundError: No module named 'gconflict.ui.widgets.file_tabs'`
 
-- [ ] **Step 3: Implementar el widget**
+- [x] **Step 3: Implementar el widget**
 
 Crear `src/gconflict/ui/widgets/file_tabs.py`:
 
@@ -1642,12 +1642,12 @@ class FileTabs(Tabs):
         return label
 ```
 
-- [ ] **Step 4: Verificar que pasa**
+- [x] **Step 4: Verificar que pasa**
 
 Run: `.venv/bin/python -m pytest tests/ui/widgets/test_file_tabs.py -q`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/gconflict/ui/widgets/file_tabs.py tests/ui/widgets/test_file_tabs.py
@@ -1674,7 +1674,7 @@ La columna izquierda del artboard principal: lista de archivos con directorio, g
     - propiedades `rows: list[str]` y `progress_text: str`.
   La Tarea 14 la consume.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 Crear `tests/ui/widgets/test_file_sidebar.py`:
 
@@ -1735,12 +1735,12 @@ async def test_sidebar_survives_an_empty_file_list() -> None:
         assert sidebar.rows == []
 ```
 
-- [ ] **Step 2: Ejecutarlo y verificar que falla**
+- [x] **Step 2: Ejecutarlo y verificar que falla**
 
 Run: `.venv/bin/python -m pytest tests/ui/widgets/test_file_sidebar.py -q`
 Expected: FAIL con `ModuleNotFoundError: No module named 'gconflict.ui.widgets.file_sidebar'`
 
-- [ ] **Step 3: Implementar el widget**
+- [x] **Step 3: Implementar el widget**
 
 Crear `src/gconflict/ui/widgets/file_sidebar.py`:
 
@@ -1851,12 +1851,12 @@ class FileSidebar(Vertical):
         return text
 ```
 
-- [ ] **Step 4: Verificar que pasa**
+- [x] **Step 4: Verificar que pasa**
 
 Run: `.venv/bin/python -m pytest tests/ui/widgets/test_file_sidebar.py -q`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/gconflict/ui/widgets/file_sidebar.py tests/ui/widgets/test_file_sidebar.py
@@ -1886,7 +1886,7 @@ El corazón del artboard principal: dos paneles con número de línea, barra de 
     - propiedades `current_text: str`, `incoming_text: str`, `current_header: str`, `incoming_header: str`.
   La Tarea 14 la consume.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 Crear `tests/ui/widgets/test_conflict_panes.py`:
 
@@ -1964,12 +1964,12 @@ async def test_clear_empties_both_panes() -> None:
         assert panes.incoming_header == ""
 ```
 
-- [ ] **Step 2: Ejecutarlo y verificar que falla**
+- [x] **Step 2: Ejecutarlo y verificar que falla**
 
 Run: `.venv/bin/python -m pytest tests/ui/widgets/test_conflict_panes.py -q`
 Expected: FAIL con `ModuleNotFoundError: No module named 'gconflict.ui.widgets.conflict_panes'`
 
-- [ ] **Step 3: Implementar el widget**
+- [x] **Step 3: Implementar el widget**
 
 Crear `src/gconflict/ui/widgets/conflict_panes.py`:
 
@@ -2129,12 +2129,12 @@ class ConflictPanes(Horizontal):
         pane.set_class(selected, "-selected")
 ```
 
-- [ ] **Step 4: Verificar que pasa**
+- [x] **Step 4: Verificar que pasa**
 
 Run: `.venv/bin/python -m pytest tests/ui/widgets/test_conflict_panes.py -q`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/gconflict/ui/widgets/conflict_panes.py tests/ui/widgets/test_conflict_panes.py
@@ -2162,7 +2162,7 @@ El panel muestra a lo sumo `max_lines` líneas para no dominar la pantalla; cuan
     - propiedades `header_text: str`, `body_text: str`.
   La Tarea 14 la consume.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 Crear `tests/ui/widgets/test_result_pane.py`:
 
@@ -2221,12 +2221,12 @@ async def test_clear_empties_the_pane() -> None:
         assert pane.body_text == ""
 ```
 
-- [ ] **Step 2: Ejecutarlo y verificar que falla**
+- [x] **Step 2: Ejecutarlo y verificar que falla**
 
 Run: `.venv/bin/python -m pytest tests/ui/widgets/test_result_pane.py -q`
 Expected: FAIL con `ModuleNotFoundError: No module named 'gconflict.ui.widgets.result_pane'`
 
-- [ ] **Step 3: Implementar el widget**
+- [x] **Step 3: Implementar el widget**
 
 Crear `src/gconflict/ui/widgets/result_pane.py`:
 
@@ -2311,17 +2311,17 @@ class ResultPane(Vertical):
         self.query_one("#result-body", Static).update("")
 ```
 
-- [ ] **Step 4: Verificar que pasa**
+- [x] **Step 4: Verificar que pasa**
 
 Run: `.venv/bin/python -m pytest tests/ui/widgets/test_result_pane.py -q`
 Expected: PASS
 
-- [ ] **Step 5: Verificar la suite completa**
+- [x] **Step 5: Verificar la suite completa**
 
 Run: `.venv/bin/python -m pytest -q 2>&1 | tail -3`
 Expected: PASS, sin fallos
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/gconflict/ui/widgets/result_pane.py tests/ui/widgets/test_result_pane.py
@@ -2351,7 +2351,7 @@ Reglas que **no** cambian y que los tests existentes ya protegen: `main()` conse
   - `GConflictApp` con `CSS_PATH = "ui/app.tcss"` y los mismos `BINDINGS` de hoy.
   La Tarea 15 y la 16 consumen el nuevo `_refresh_view`.
 
-- [ ] **Step 1: Escribir el test del header**
+- [x] **Step 1: Escribir el test del header**
 
 Crear `tests/ui/widgets/test_repository_header.py`:
 
@@ -2397,12 +2397,12 @@ async def test_header_names_a_detached_head() -> None:
         assert header.rendered_text == "gconflict / lynxweb   REBASE   detached HEAD"
 ```
 
-- [ ] **Step 2: Ejecutarlo y verificar que falla**
+- [x] **Step 2: Ejecutarlo y verificar que falla**
 
 Run: `.venv/bin/python -m pytest tests/ui/widgets/test_repository_header.py -q`
 Expected: FAIL con `ModuleNotFoundError: No module named 'gconflict.ui.widgets.repository_header'`
 
-- [ ] **Step 3: Implementar el header**
+- [x] **Step 3: Implementar el header**
 
 Crear `src/gconflict/ui/widgets/repository_header.py`:
 
@@ -2451,12 +2451,12 @@ class RepositoryHeader(Static):
         self.update(text)
 ```
 
-- [ ] **Step 4: Verificar que el header pasa**
+- [x] **Step 4: Verificar que el header pasa**
 
 Run: `.venv/bin/python -m pytest tests/ui/widgets/test_repository_header.py -q`
 Expected: PASS
 
-- [ ] **Step 5: Escribir el test de la nueva composición**
+- [x] **Step 5: Escribir el test de la nueva composición**
 
 Primero extender `FakeConflictService` con los tres métodos nuevos (`context`, `file_progress`, `preview_resolution`). Añadir a `FakeConflictService.__init__`:
 
@@ -2580,12 +2580,12 @@ async def test_save_blocked_explains_itself_in_the_status_line() -> None:
         )
 ```
 
-- [ ] **Step 6: Ejecutarlos y verificar que fallan**
+- [x] **Step 6: Ejecutarlos y verificar que fallan**
 
 Run: `.venv/bin/python -m pytest tests/test_app.py -q -k redesigned`
 Expected: FAIL con `NoMatches: No nodes match 'RepositoryHeader'`
 
-- [ ] **Step 7: Reescribir la composición de la app**
+- [x] **Step 7: Reescribir la composición de la app**
 
 En `src/gconflict/app.py`, sustituir los imports de widgets y `compose` por:
 
@@ -2887,7 +2887,7 @@ En `action_edit`, justo antes de lanzar el worker, informar de que la interfaz s
 
 Todo método que hoy termina llamando a `_render_active_conflict()` pasa a llamar `_refresh_view()`.
 
-- [ ] **Step 8: Adaptar los tests existentes de `tests/test_app.py`**
+- [x] **Step 8: Adaptar los tests existentes de `tests/test_app.py`**
 
 Los tests que consultan `#conflict-count`, `#current` y `#incoming` ya no aplican: esos ids desaparecieron. Reescribir cada uno para consultar el widget equivalente:
 
@@ -2900,12 +2900,12 @@ Los tests que consultan `#conflict-count`, `#current` y `#incoming` ya no aplica
 
 Los tests de `main()` (`test_main_*`) **no** se tocan: `main()` no cambia.
 
-- [ ] **Step 9: Verificar la suite completa**
+- [x] **Step 9: Verificar la suite completa**
 
 Run: `.venv/bin/python -m pytest -q 2>&1 | tail -5`
 Expected: PASS, sin fallos
 
-- [ ] **Step 10: Ver la app de verdad**
+- [x] **Step 10: Ver la app de verdad**
 
 En un repositorio con un conflicto real:
 
@@ -2915,7 +2915,7 @@ En un repositorio con un conflicto real:
 
 Expected: header con operación y rama, tabs con contadores, sidebar con progreso, dos paneles y el panel RESULT vacío hasta que todos los conflictos tengan elección.
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add src/gconflict/app.py src/gconflict/ui/widgets/repository_header.py tests/test_app.py tests/ui/widgets/test_repository_header.py
@@ -2936,7 +2936,7 @@ El artboard «Estados», recuadro A. Hoy `_unsupported_message` produce dos lín
 - Consumes: `StatusLine`, `ActionBar`, `ConflictType`.
 - Produces: `GConflictApp._unsupported_message(conflict_type: ConflictType) -> tuple[str, str]` — título y detalle para `StatusLine`.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 Añadir a `tests/test_app.py`:
 
@@ -2975,12 +2975,12 @@ async def test_unsupported_file_blocks_every_resolution_key() -> None:
         assert service.mutation_calls == []
 ```
 
-- [ ] **Step 2: Ejecutarlos y verificar que fallan**
+- [x] **Step 2: Ejecutarlos y verificar que fallan**
 
 Run: `.venv/bin/python -m pytest tests/test_app.py -q -k unsupported`
 Expected: FAIL — el texto del `StatusLine` no coincide
 
-- [ ] **Step 3: Reescribir el mensaje**
+- [x] **Step 3: Reescribir el mensaje**
 
 En `src/gconflict/app.py`, sustituir `_unsupported_message` por:
 
@@ -3032,17 +3032,17 @@ En `_reload_selected_file`, sustituir la rama de tipo no soportado por:
             return
 ```
 
-- [ ] **Step 4: Verificar que pasan**
+- [x] **Step 4: Verificar que pasan**
 
 Run: `.venv/bin/python -m pytest tests/test_app.py -q -k unsupported`
 Expected: PASS
 
-- [ ] **Step 5: Verificar la suite completa**
+- [x] **Step 5: Verificar la suite completa**
 
 Run: `.venv/bin/python -m pytest -q 2>&1 | tail -3`
 Expected: PASS, sin fallos
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/gconflict/app.py tests/test_app.py
@@ -3065,7 +3065,7 @@ El recuadro D del mismo artboard («nada que resolver») **no necesita trabajo**
 - Consumes: `ConflictService.file_progress`, `StatusLine`, `ActionBar`, `GitOperation`.
 - Produces: `GConflictApp._continue_hint() -> str` — el comando que el usuario debe correr, según la operación.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 Añadir a `tests/test_app.py`:
 
@@ -3103,12 +3103,12 @@ async def test_continue_hint_follows_the_operation() -> None:
         assert app._continue_hint() == "git rebase --continue"
 ```
 
-- [ ] **Step 2: Ejecutarlos y verificar que fallan**
+- [x] **Step 2: Ejecutarlos y verificar que fallan**
 
 Run: `.venv/bin/python -m pytest tests/test_app.py -q -k "next_step or continue_hint"`
 Expected: FAIL con `AttributeError: 'GConflictApp' object has no attribute '_continue_hint'`
 
-- [ ] **Step 3: Implementar el estado final**
+- [x] **Step 3: Implementar el estado final**
 
 Sustituir el stub de `_report_all_resolved` que dejó la Tarea 14 por la versión completa, y añadir el mapa de comandos. En `src/gconflict/app.py`:
 
@@ -3145,22 +3145,22 @@ Añadir el import que falta al principio del archivo:
 from gconflict.git.operation import GitOperation
 ```
 
-- [ ] **Step 4: Verificar que pasan**
+- [x] **Step 4: Verificar que pasan**
 
 Run: `.venv/bin/python -m pytest tests/test_app.py -q -k "next_step or continue_hint"`
 Expected: PASS
 
-- [ ] **Step 5: Verificar la suite completa**
+- [x] **Step 5: Verificar la suite completa**
 
 Run: `.venv/bin/python -m pytest -q 2>&1 | tail -3`
 Expected: PASS, sin fallos
 
-- [ ] **Step 6: Verificar cobertura de la capa nueva**
+- [x] **Step 6: Verificar cobertura de la capa nueva**
 
 Run: `.venv/bin/python -m pytest --cov=gconflict.ui --cov=gconflict.models --cov-report=term-missing -q 2>&1 | tail -15`
 Expected: cada módulo de `gconflict/ui/widgets/` por encima del 90%
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/gconflict/app.py tests/test_app.py
@@ -3173,14 +3173,14 @@ git commit -m "feat: report the all-resolved state and the user's next Git step"
 
 Después de la Tarea 16, con evidencia, no de memoria:
 
-- [ ] `.venv/bin/python -m pytest -q` — suite completa en verde, sin flags.
-- [ ] `.venv/bin/python -m pip install -e ".[dev]"` — reinstalación limpia.
-- [ ] `.venv/bin/gconflict` desde un directorio que no es repo → imprime `Not a Git repository.` y sale con `2`. Comprobar con `echo $?`.
-- [ ] `.venv/bin/gconflict` desde un repo sin conflictos → imprime `No unresolved Git conflicts found.` y sale con `0`.
-- [ ] `.venv/bin/gconflict --version` → `gconflict 0.1.0`, sale con `0`.
-- [ ] `.venv/bin/gconflict --invalid` → sale con `4`.
-- [ ] En un repo con un conflicto real: resolver, `s`, `r`, y comprobar con `git status` que el archivo quedó staged y que **no** se creó ningún commit.
-- [ ] `git log --oneline` no muestra commits creados por gconflict.
+- [x] `.venv/bin/python -m pytest -q` — suite completa en verde, sin flags.
+- [x] `.venv/bin/python -m pip install -e ".[dev]"` — reinstalación limpia.
+- [x] `.venv/bin/gconflict` desde un directorio que no es repo → imprime `Not a Git repository.` y sale con `2`. Comprobar con `echo $?`.
+- [x] `.venv/bin/gconflict` desde un repo sin conflictos → imprime `No unresolved Git conflicts found.` y sale con `0`.
+- [x] `.venv/bin/gconflict --version` → `gconflict 0.1.0`, sale con `0`.
+- [x] `.venv/bin/gconflict --invalid` → sale con `4`.
+- [x] En un repo con un conflicto real: resolver, `s`, `r`, y comprobar con `git status` que el archivo quedó staged y que **no** se creó ningún commit.
+- [x] `git log --oneline` no muestra commits creados por gconflict.
 
 ## Deuda conocida que este plan no toca
 
