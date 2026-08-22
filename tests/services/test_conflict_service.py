@@ -5,6 +5,7 @@ import pytest
 
 from gconflict.filesystem.snapshot import ConcurrentModificationError
 from gconflict.models.resolution import Resolution
+from gconflict.git.operation import GitOperation
 from gconflict.models.conflicted_file import ConflictedFile, ConflictType
 from gconflict.services.conflict_service import ConflictService
 
@@ -171,3 +172,21 @@ def test_mark_resolved_rejects_symlink_escape_before_loading(tmp_path: Path) -> 
 
     repository.conflicted_files.assert_not_called()
     repository.stage.assert_not_called()
+
+
+def test_context_composes_repository_state_into_labels() -> None:
+    repository = Mock()
+    repository.root.return_value = Path("/work/lynxweb")
+    repository.current_branch.return_value = "feature/user-status"
+    repository.incoming_ref.return_value = "main"
+    repository.operation.return_value = GitOperation.MERGE
+
+    context = ConflictService(repository).context("/work/lynxweb/lib")
+
+    assert context.root == Path("/work/lynxweb")
+    assert context.name == "lynxweb"
+    assert context.branch == "feature/user-status"
+    assert context.operation is GitOperation.MERGE
+    assert context.current_label == "ours - feature/user-status"
+    assert context.incoming_label == "theirs - main"
+    repository.root.assert_called_once_with("/work/lynxweb/lib")

@@ -15,6 +15,7 @@ from gconflict.filesystem.snapshot import (
 from gconflict.git.repository import GitRepository, _confined_relative_path
 from gconflict.models.conflict import Conflict
 from gconflict.models.conflicted_file import ConflictedFile
+from gconflict.models.repository_context import RepositoryContext, side_labels
 from gconflict.models.resolution import Resolution
 
 
@@ -27,6 +28,22 @@ class ConflictService:
     def root(self, cwd: str | Path | None = None) -> Path:
         """Delegate repository-root discovery to Git."""
         return self.repository.root(cwd)
+
+    def context(self, cwd: str | Path | None = None) -> RepositoryContext:
+        """Gather the repository state the interface labels its two sides with."""
+        root = self.repository.root(cwd)
+        branch = self.repository.current_branch(root)
+        incoming = self.repository.incoming_ref(root)
+        operation = self.repository.operation(root)
+        current_label, incoming_label = side_labels(operation, branch, incoming)
+        return RepositoryContext(
+            root=root,
+            name=root.name,
+            branch=branch,
+            operation=operation,
+            current_label=current_label,
+            incoming_label=incoming_label,
+        )
 
     def conflicted_files(self, cwd: str | Path | None = None) -> list[Path]:
         """Delegate unresolved-file discovery to the repository."""
