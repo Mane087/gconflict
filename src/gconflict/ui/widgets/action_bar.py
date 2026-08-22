@@ -1,0 +1,81 @@
+"""Available actions, grouped by what they are allowed to touch."""
+
+from collections.abc import Sequence
+from dataclasses import dataclass
+
+from rich.text import Text
+from textual.widgets import Static
+
+SCOPES = ("CONFLICT", "FILE", "REPO")
+_SCOPE_WIDTH = max(len(scope) for scope in SCOPES) + 2
+
+
+@dataclass(frozen=True)
+class Action:
+    """One keyboard action and whether the user may take it right now."""
+
+    key: str
+    label: str
+    scope: str
+    enabled: bool = True
+    reason: str = ""
+    active: bool = False
+
+
+class ActionBar(Static):
+    """Show one row per scope, in SCOPES order, with blocking reasons."""
+
+    DEFAULT_CSS = """
+    ActionBar {
+        height: auto;
+        padding: 0 1;
+        background: $surface-2;
+        border-top: solid $line;
+    }
+    """
+
+    def __init__(self) -> None:
+        super().__init__("")
+        self._rendered_text = ""
+
+    @property
+    def rendered_text(self) -> str:
+        """Return the plain text currently displayed."""
+        return self._rendered_text
+
+    def set_actions(self, actions: Sequence[Action]) -> None:
+        """Replace every action shown."""
+        for action in actions:
+            if action.scope not in SCOPES:
+                raise ValueError(f"unknown action scope: {action.scope}")
+
+        text = Text()
+        for scope in SCOPES:
+            in_scope = [action for action in actions if action.scope == scope]
+            if not in_scope:
+                continue
+            if text.plain:
+                text.append("\n")
+            text.append(scope.ljust(_SCOPE_WIDTH), style="#4d5462")
+            for position, action in enumerate(in_scope):
+                if position:
+                    text.append("  ")
+                self._append_action(text, action)
+
+        self._rendered_text = text.plain
+        self.update(text)
+
+    @staticmethod
+    def _append_action(text: Text, action: Action) -> None:
+        """Append one action, dimmed when it is unavailable."""
+        if not action.enabled:
+            key_style = label_style = "#4d5462"
+        elif action.active:
+            key_style = label_style = "#e8a44c"
+        else:
+            key_style, label_style = "#d6dae3", "#a4abba"
+
+        text.append(f"[{action.key}]", style=key_style)
+        text.append(f" {action.label}", style=label_style)
+        if action.reason:
+            text.append(f" - {action.reason}", style="#4d5462")
