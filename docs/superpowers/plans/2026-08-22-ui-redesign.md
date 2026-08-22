@@ -1466,8 +1466,8 @@ La fila de tabs del artboard principal: `● user.ex 2 │ ✓ index.ex │ ○ 
 - Consumes: `FileProgress` (Tarea 6), `ConflictType`.
 - Produces:
   - `TabEntry(name: str, remaining: int, glyph: str)` — dataclass congelada.
-  - `FileTabs(Tabs)` con `set_files(entries: Sequence[TabEntry]) -> None` y la propiedad `labels: list[str]`.
-  - `FileTabs.entry_for(tab_id: str) -> TabEntry` para traducir un `Tabs.TabActivated` de vuelta al archivo.
+  - `FileTabs(Tabs)` con `set_files(entries: Sequence[TabEntry]) -> None` y las propiedades `labels: list[str]` y `tab_ids: list[str]`.
+  - `FileTabs.entry_for(tab_id: str) -> TabEntry` para traducir un `Tabs.TabActivated` de vuelta al archivo. Los ids llevan un número de generación (`file-1-0`, `file-2-0`, …) porque `Tabs.clear()` elimina de forma diferida y los ids se solaparían entre llamadas.
   - `tab_entries(progress: Sequence[FileProgress], resolved_paths: Container[Path]) -> list[TabEntry]` — función pura de módulo.
   La Tarea 14 la consume.
 
@@ -1520,7 +1520,7 @@ async def test_file_tabs_map_an_activated_tab_back_to_its_entry() -> None:
         entries = [TabEntry("user.ex", 2, "*"), TabEntry("index.ex", 0, "+")]
         tabs.set_files(entries)
         await pilot.pause()
-        assert tabs.entry_for("file-1") == entries[1]
+        assert tabs.entry_for(tabs.tab_ids[1]) == entries[1]
 
 
 async def test_setting_files_twice_replaces_the_previous_tabs() -> None:
@@ -1604,18 +1604,26 @@ class FileTabs(Tabs):
     def __init__(self) -> None:
         super().__init__()
         self._entries: dict[str, TabEntry] = {}
+        self._generation = 0
 
     @property
     def labels(self) -> list[str]:
         """Return the plain label of every tab, in order."""
         return [tab.label.plain for tab in self.query(Tab)]
 
+    @property
+    def tab_ids(self) -> list[str]:
+        """Return the id of every tab, in order."""
+        return [str(tab.id) for tab in self.query(Tab)]
+
     def set_files(self, entries: Sequence[TabEntry]) -> None:
         """Replace every tab with one per given entry."""
+        # Tabs.clear() removes deferred, so ids must not collide across calls.
         self.clear()
+        self._generation += 1
         self._entries = {}
         for position, entry in enumerate(entries):
-            tab_id = f"file-{position}"
+            tab_id = f"file-{self._generation}-{position}"
             self._entries[tab_id] = entry
             self.add_tab(Tab(self._label(entry), id=tab_id))
 
