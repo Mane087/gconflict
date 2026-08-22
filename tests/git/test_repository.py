@@ -235,3 +235,72 @@ def test_stage_adds_a_real_file_to_a_real_index(tmp_path: Path) -> None:
         check=True,
     )
     assert staged.stdout.splitlines() == ["nested/file.txt"]
+
+
+def test_current_branch_returns_the_checked_out_branch() -> None:
+    client = Mock()
+    client.run.return_value = subprocess.CompletedProcess([], 0, stdout="feature/user-status\n")
+
+    assert GitRepository(client).current_branch("/repo") == "feature/user-status"
+    client.run.assert_called_once_with(
+        ["symbolic-ref", "--quiet", "--short", "HEAD"], cwd="/repo", check=False
+    )
+
+
+def test_current_branch_returns_none_on_detached_head() -> None:
+    client = Mock()
+    client.run.return_value = subprocess.CompletedProcess([], 1, stdout="")
+
+    assert GitRepository(client).current_branch() is None
+
+
+def test_incoming_ref_names_the_merged_branch() -> None:
+    repository = GitRepository(Mock())
+    repository.operation = Mock(return_value=GitOperation.MERGE)
+    repository.client.run.return_value = subprocess.CompletedProcess([], 0, stdout="main\n")
+
+    assert repository.incoming_ref("/repo") == "main"
+    repository.client.run.assert_called_once_with(
+        ["name-rev", "--name-only", "--refs=refs/heads/*", "MERGE_HEAD"],
+        cwd="/repo",
+        check=False,
+    )
+
+
+def test_incoming_ref_strips_the_distance_suffix() -> None:
+    repository = GitRepository(Mock())
+    repository.operation = Mock(return_value=GitOperation.CHERRY_PICK)
+    repository.client.run.return_value = subprocess.CompletedProcess([], 0, stdout="main~3\n")
+
+    assert repository.incoming_ref() == "main"
+
+
+def test_incoming_ref_falls_back_to_the_short_sha() -> None:
+    repository = GitRepository(Mock())
+    repository.operation = Mock(return_value=GitOperation.REVERT)
+    repository.client.run.side_effect = [
+        subprocess.CompletedProcess([], 0, stdout="undefined\n"),
+        subprocess.CompletedProcess([], 0, stdout="a1b2c3d\n"),
+    ]
+
+    assert repository.incoming_ref() == "a1b2c3d"
+
+
+def test_incoming_ref_reads_the_rebase_head_name(tmp_path: Path) -> None:
+    head_name = tmp_path / "head-name"
+    head_name.write_text("refs/heads/feature/user-status\n", encoding="utf-8")
+    repository = GitRepository(Mock())
+    repository.operation = Mock(return_value=GitOperation.REBASE)
+    repository.client.run.return_value = subprocess.CompletedProcess(
+        [], 0, stdout=f"{head_name}\n"
+    )
+
+    assert repository.incoming_ref(tmp_path) == "feature/user-status"
+
+
+def test_incoming_ref_returns_none_without_an_operation() -> None:
+    repository = GitRepository(Mock())
+    repository.operation = Mock(return_value=GitOperation.NONE)
+
+    assert repository.incoming_ref() is None
+    repository.client.run.assert_not_called()
