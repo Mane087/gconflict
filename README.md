@@ -1,3 +1,5 @@
+<img src="assets/gconflict-logo.svg" alt="Logo app">
+
 # gconflict
 
 gconflict es una interfaz de terminal para resolver conflictos de Git.

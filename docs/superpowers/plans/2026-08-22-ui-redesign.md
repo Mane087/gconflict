@@ -87,7 +87,8 @@ Glifos, legibles sin color: `◆` CURRENT (relleno), `◇` INCOMING (hueco), `�
 | `src/gconflict/models/repository_context.py` | `RepositoryContext`: raíz, nombre, rama, operación y etiquetas de los dos lados. |
 | `src/gconflict/models/file_progress.py` | `FileProgress`: un descriptor de archivo más su número de conflictos de contenido. |
 | `src/gconflict/ui/__init__.py` | Paquete de presentación. |
-| `src/gconflict/ui/app.tcss` | Los tokens de la tabla de arriba y el layout de la pantalla. |
+| `src/gconflict/ui/tokens.py` | `TOKENS` (la única fuente de los colores) y `TokenApp`, que los publica como variables CSS. |
+| `src/gconflict/ui/app.tcss` | El layout de la pantalla y las clases utilitarias. |
 | `src/gconflict/ui/widgets/__init__.py` | Reexporta los widgets. |
 | `src/gconflict/ui/widgets/status_line.py` | `StatusLine`: la línea de estado de cuatro variantes. |
 | `src/gconflict/ui/widgets/action_bar.py` | `ActionBar` y `Action`: acciones agrupadas por ámbito con motivo de bloqueo. |
@@ -106,7 +107,7 @@ Glifos, legibles sin color: `◆` CURRENT (relleno), `◇` INCOMING (hueco), `�
 | `pyproject.toml` | Config de pytest, `pytest-asyncio` en `dev`, package-data del `.tcss`. |
 | `src/gconflict/git/repository.py` | Corregir `stage`; añadir `current_branch` e `incoming_ref`. |
 | `src/gconflict/services/conflict_service.py` | Añadir `context`, `preview_resolution`, `file_progress`. |
-| `src/gconflict/app.py` | Reescritura de `compose` y del cableado. `main()` no cambia. |
+| `src/gconflict/app.py` | Reescritura de `compose` y del cableado; `GConflictApp` pasa a heredar de `TokenApp`. `main()` no cambia. |
 | `tests/git/test_repository.py` | Tests de las tres cosas de arriba. |
 | `tests/services/test_conflict_service.py` | Tests de los tres métodos nuevos. |
 | `tests/test_app.py` | Adaptar a la nueva composición. |
@@ -910,12 +911,15 @@ git commit -m "feat: count content conflicts per unresolved file"
 
 ### Task 7: El archivo de estilos
 
-Los tokens de la tabla «Paleta del sistema visual» como variables de Textual CSS, más el layout de la pantalla. Todas las tareas de widget consumen estas variables; ninguna escribe un hex a mano.
+Los tokens de la tabla «Paleta del sistema visual», más el layout de la pantalla. Todas las tareas de widget consumen estas variables; ninguna escribe un hex a mano.
+
+**Corregido durante la ejecución.** La versión original de esta tarea ponía los tokens dentro de `app.tcss` y los usaba desde el `DEFAULT_CSS` de cada widget. Eso no funciona: Textual resuelve el `DEFAULT_CSS` de un widget solo con las variables que publica la app en ejecución vía `get_css_variables()`, así que un `$surface-1` definido en `app.tcss` revienta con `UnresolvedVariableError`. La única fuente pasa a ser `src/gconflict/ui/tokens.py`, que expone el diccionario `TOKENS` y una clase base `TokenApp` que los publica; `app.tcss` conserva solo el layout. Los harness de los tests de widget heredan de `TokenApp`, no de `App`.
 
 Ojo con el empaquetado: `pyproject.toml` usa `setuptools.packages.find`, que **no** incluye archivos no-Python. Sin `package-data` el `.tcss` no viaja en el wheel y la app instalada arranca sin estilos.
 
 **Files:**
 - Create: `src/gconflict/ui/__init__.py`
+- Create: `src/gconflict/ui/tokens.py`
 - Create: `src/gconflict/ui/app.tcss`
 - Create: `src/gconflict/ui/widgets/__init__.py`
 - Create: `tests/ui/__init__.py` (vacío, para que pytest no colisione nombres)
@@ -924,16 +928,20 @@ Ojo con el empaquetado: `pyproject.toml` usa `setuptools.packages.find`, que **n
 
 **Interfaces:**
 - Consumes: nada.
-- Produces: las variables `$surface-0`…`$danger` y las clases `.-ok`, `.-danger`, `.-current`, `.-incoming`, `.-muted`, `.-dim`, `.-keycap`, `.-disabled`. Todas las tareas siguientes las usan.
+- Produces:
+  - `TOKENS: dict[str, str]` en `gconflict.ui.tokens` — los 20 valores de la tabla.
+  - `TokenApp(App[None])` en el mismo módulo, que los publica vía `get_css_variables()`. **`GConflictApp` y todos los harness de test de widget heredan de ella.**
+  - Las variables `$surface-0`…`$danger` y las clases `.-ok`, `.-danger`, `.-current`, `.-incoming`, `.-muted`, `.-dim`, `.-keycap`, `.-disabled`. Todas las tareas siguientes las usan.
 
 - [ ] **Step 1: Escribir el test que falla**
 
-Crear `tests/ui/__init__.py` vacío y `tests/ui/test_stylesheet.py`:
+Crear `tests/ui/__init__.py` y `tests/ui/widgets/__init__.py` vacíos, y `tests/ui/test_stylesheet.py`:
 
 ```python
 from pathlib import Path
 
 import gconflict.ui
+from gconflict.ui.tokens import TOKENS, TokenApp
 
 
 STYLESHEET = Path(gconflict.ui.__file__).parent / "app.tcss"
@@ -943,31 +951,36 @@ def test_stylesheet_ships_with_the_package() -> None:
     assert STYLESHEET.is_file()
 
 
-def test_stylesheet_defines_every_design_token() -> None:
-    text = STYLESHEET.read_text(encoding="utf-8")
-    for token, value in [
-        ("$surface-0", "#0b0d12"),
-        ("$surface-1", "#10131a"),
-        ("$surface-2", "#12151d"),
-        ("$surface-3", "#1c202b"),
-        ("$line", "#272c39"),
-        ("$text-1", "#d6dae3"),
-        ("$text-2", "#a4abba"),
-        ("$text-3", "#79808f"),
-        ("$text-4", "#4d5462"),
-        ("$text-5", "#343b48"),
-        ("$current", "#e8a44c"),
-        ("$current-bg", "#241c10"),
-        ("$current-line", "#8a6b34"),
-        ("$current-text", "#f0d3a4"),
-        ("$incoming", "#4ca8e8"),
-        ("$incoming-bg", "#10202c"),
-        ("$incoming-line", "#35708f"),
-        ("$incoming-text", "#a8d6f5"),
-        ("$ok", "#6fbf73"),
-        ("$danger", "#d9645f"),
-    ]:
-        assert f"{token}: {value};" in text
+def test_tokens_carry_every_design_value() -> None:
+    assert TOKENS == {
+        "surface-0": "#0b0d12",
+        "surface-1": "#10131a",
+        "surface-2": "#12151d",
+        "surface-3": "#1c202b",
+        "line": "#272c39",
+        "text-1": "#d6dae3",
+        "text-2": "#a4abba",
+        "text-3": "#79808f",
+        "text-4": "#4d5462",
+        "text-5": "#343b48",
+        "current": "#e8a44c",
+        "current-bg": "#241c10",
+        "current-line": "#8a6b34",
+        "current-text": "#f0d3a4",
+        "incoming": "#4ca8e8",
+        "incoming-bg": "#10202c",
+        "incoming-line": "#35708f",
+        "incoming-text": "#a8d6f5",
+        "ok": "#6fbf73",
+        "danger": "#d9645f",
+    }
+
+
+async def test_token_app_publishes_the_tokens_as_css_variables() -> None:
+    async with TokenApp().run_test() as pilot:
+        variables = pilot.app.get_css_variables()
+    for name, value in TOKENS.items():
+        assert variables[name] == value
 ```
 
 - [ ] **Step 2: Ejecutarlo y verificar que falla**
@@ -975,7 +988,7 @@ def test_stylesheet_defines_every_design_token() -> None:
 Run: `.venv/bin/python -m pytest tests/ui/test_stylesheet.py -q`
 Expected: FAIL con `ModuleNotFoundError: No module named 'gconflict.ui'`
 
-- [ ] **Step 3: Crear el paquete y la hoja de estilos**
+- [ ] **Step 3: Crear el paquete, los tokens y la hoja de estilos**
 
 Crear `src/gconflict/ui/__init__.py`:
 
@@ -989,34 +1002,55 @@ Crear `src/gconflict/ui/widgets/__init__.py`:
 """Widgets used by the gconflict interface."""
 ```
 
-Crear `src/gconflict/ui/app.tcss`:
+Crear `src/gconflict/ui/tokens.py` — **la única fuente de los colores**:
+
+```python
+"""The single source of the design tokens every widget styles itself with.
+
+Textual parses a widget's ``DEFAULT_CSS`` with only the variables the running
+app publishes through ``get_css_variables``, so the tokens cannot live in
+``app.tcss`` alone: a widget mounted by any other app would fail to parse.
+"""
+
+from textual.app import App
+
+TOKENS: dict[str, str] = {
+    "surface-0": "#0b0d12",
+    "surface-1": "#10131a",
+    "surface-2": "#12151d",
+    "surface-3": "#1c202b",
+    "line": "#272c39",
+    "text-1": "#d6dae3",
+    "text-2": "#a4abba",
+    "text-3": "#79808f",
+    "text-4": "#4d5462",
+    "text-5": "#343b48",
+    "current": "#e8a44c",
+    "current-bg": "#241c10",
+    "current-line": "#8a6b34",
+    "current-text": "#f0d3a4",
+    "incoming": "#4ca8e8",
+    "incoming-bg": "#10202c",
+    "incoming-line": "#35708f",
+    "incoming-text": "#a8d6f5",
+    "ok": "#6fbf73",
+    "danger": "#d9645f",
+}
+
+
+class TokenApp(App[None]):
+    """Base application that publishes the design tokens to every stylesheet."""
+
+    def get_css_variables(self) -> dict[str, str]:
+        """Add the design tokens to the variables Textual resolves CSS with."""
+        return {**super().get_css_variables(), **TOKENS}
+```
+
+Crear `src/gconflict/ui/app.tcss` — solo layout:
 
 ```css
-/* Design tokens. Every widget reads colors from here, never inline. */
-$surface-0: #0b0d12;
-$surface-1: #10131a;
-$surface-2: #12151d;
-$surface-3: #1c202b;
-$line: #272c39;
-
-$text-1: #d6dae3;
-$text-2: #a4abba;
-$text-3: #79808f;
-$text-4: #4d5462;
-$text-5: #343b48;
-
-$current: #e8a44c;
-$current-bg: #241c10;
-$current-line: #8a6b34;
-$current-text: #f0d3a4;
-
-$incoming: #4ca8e8;
-$incoming-bg: #10202c;
-$incoming-line: #35708f;
-$incoming-text: #a8d6f5;
-
-$ok: #6fbf73;
-$danger: #d9645f;
+/* Layout only. The color tokens live in tokens.py, which publishes them as
+   CSS variables so widget DEFAULT_CSS can resolve them too. */
 
 Screen {
     background: $surface-0;
@@ -1079,12 +1113,13 @@ El artboard «Panel de opciones», sección 4. Hoy los mensajes son cadenas suel
 Crear `tests/ui/widgets/__init__.py` vacío y `tests/ui/widgets/test_status_line.py`:
 
 ```python
-from textual.app import App, ComposeResult
+from textual.app import ComposeResult
 
+from gconflict.ui.tokens import TokenApp
 from gconflict.ui.widgets.status_line import StatusKind, StatusLine
 
 
-class Harness(App[None]):
+class Harness(TokenApp):
     def compose(self) -> ComposeResult:
         yield StatusLine()
 
@@ -1250,12 +1285,13 @@ El artboard «Panel de opciones», secciones 1 y 2. Tres filas: `CONFLICT` (solo
 Crear `tests/ui/widgets/test_action_bar.py`:
 
 ```python
-from textual.app import App, ComposeResult
+from textual.app import ComposeResult
 
+from gconflict.ui.tokens import TokenApp
 from gconflict.ui.widgets.action_bar import Action, ActionBar
 
 
-class Harness(App[None]):
+class Harness(TokenApp):
     def compose(self) -> ComposeResult:
         yield ActionBar()
 
@@ -1449,7 +1485,7 @@ from gconflict.models.file_progress import FileProgress
 from gconflict.ui.widgets.file_tabs import FileTabs, TabEntry, tab_entries
 
 
-class Harness(App[None]):
+class Harness(TokenApp):
     def compose(self) -> ComposeResult:
         yield FileTabs()
 
@@ -1637,12 +1673,13 @@ Crear `tests/ui/widgets/test_file_sidebar.py`:
 ```python
 from pathlib import Path
 
-from textual.app import App, ComposeResult
+from textual.app import ComposeResult
 
+from gconflict.ui.tokens import TokenApp
 from gconflict.ui.widgets.file_sidebar import FileSidebar, SidebarEntry
 
 
-class Harness(App[None]):
+class Harness(TokenApp):
     def compose(self) -> ComposeResult:
         yield FileSidebar()
 
@@ -1851,7 +1888,7 @@ from gconflict.models.resolution import Resolution
 from gconflict.ui.widgets.conflict_panes import ConflictPanes
 
 
-class Harness(App[None]):
+class Harness(TokenApp):
     def compose(self) -> ComposeResult:
         yield ConflictPanes()
 
@@ -2120,12 +2157,13 @@ El panel muestra a lo sumo `max_lines` líneas para no dominar la pantalla; cuan
 Crear `tests/ui/widgets/test_result_pane.py`:
 
 ```python
-from textual.app import App, ComposeResult
+from textual.app import ComposeResult
 
+from gconflict.ui.tokens import TokenApp
 from gconflict.ui.widgets.result_pane import ResultPane
 
 
-class Harness(App[None]):
+class Harness(TokenApp):
     def compose(self) -> ComposeResult:
         yield ResultPane()
 
@@ -2317,7 +2355,7 @@ from gconflict.models.repository_context import RepositoryContext
 from gconflict.ui.widgets.repository_header import RepositoryHeader
 
 
-class Harness(App[None]):
+class Harness(TokenApp):
     def compose(self) -> ComposeResult:
         yield RepositoryHeader()
 

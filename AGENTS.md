@@ -5,10 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project
 
 `gconflict` — a Textual TUI that resolves Git merge conflicts. Python 3.13+, `src/` layout,
-single runtime dependency (`textual`). `plan.md` (Spanish, ~2700 lines) is the authoritative
-spec: it holds the numbered business rules (`RN-001`…`RN-025`), the layer design, and the
-iteration order. Consult it before changing behavior — most design questions are already
-answered there.
+single runtime dependency (`textual`). 
 
 ## Commands
 
@@ -62,9 +59,6 @@ Both services are constructor-injected and defaulted (`service or ConflictServic
 how every test substitutes a fake.
 
 ## Invariants
-
-These come from `plan.md` and are enforced by tests — breaking one breaks the product's
-contract, not just a test:
 
 - **Git is the source of truth.** No parallel model of the repository; query Git each time.
   Never reimplement staging, index reading, or merge logic.
