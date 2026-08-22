@@ -7,6 +7,7 @@ from gconflict.filesystem.snapshot import ConcurrentModificationError
 from gconflict.models.resolution import Resolution
 from gconflict.git.operation import GitOperation
 from gconflict.models.conflicted_file import ConflictedFile, ConflictType
+from gconflict.models.file_progress import FileProgress
 from gconflict.services.conflict_service import ConflictService
 
 
@@ -232,3 +233,39 @@ def test_resolve_file_writes_exactly_what_preview_returned(tmp_path: Path) -> No
 
     assert saved.text == expected
     assert path.read_text(encoding="utf-8") == expected
+
+
+def test_file_progress_counts_conflicts_per_content_file(tmp_path: Path) -> None:
+    two = tmp_path / "two.txt"
+    two.write_text(
+        "<<<<<<< HEAD\na\n=======\nb\n>>>>>>> main\n"
+        "<<<<<<< HEAD\nc\n=======\nd\n>>>>>>> main\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "logo.png").write_bytes(b"\x89PNG")
+
+    repository = Mock()
+    repository.root.return_value = tmp_path
+    repository.conflicted_file_descriptors.return_value = [
+        ConflictedFile(Path("two.txt"), ConflictType.CONTENT),
+        ConflictedFile(Path("logo.png"), ConflictType.ADD_ADD),
+    ]
+
+    progress = ConflictService(repository).file_progress(tmp_path)
+
+    assert [(entry.file.path, entry.total, entry.supported) for entry in progress] == [
+        (Path("two.txt"), 2, True),
+        (Path("logo.png"), 0, False),
+    ]
+
+
+def test_file_progress_counts_zero_for_an_unreadable_content_file(tmp_path: Path) -> None:
+    repository = Mock()
+    repository.root.return_value = tmp_path
+    repository.conflicted_file_descriptors.return_value = [
+        ConflictedFile(Path("gone.txt"), ConflictType.CONTENT),
+    ]
+
+    progress = ConflictService(repository).file_progress(tmp_path)
+
+    assert [(entry.file.path, entry.total) for entry in progress] == [(Path("gone.txt"), 0)]

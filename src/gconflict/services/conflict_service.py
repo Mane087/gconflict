@@ -14,7 +14,8 @@ from gconflict.filesystem.snapshot import (
 )
 from gconflict.git.repository import GitRepository, _confined_relative_path
 from gconflict.models.conflict import Conflict
-from gconflict.models.conflicted_file import ConflictedFile
+from gconflict.models.conflicted_file import ConflictedFile, ConflictType
+from gconflict.models.file_progress import FileProgress
 from gconflict.models.repository_context import RepositoryContext, side_labels
 from gconflict.models.resolution import Resolution
 
@@ -54,6 +55,23 @@ class ConflictService:
     ) -> list[ConflictedFile]:
         """Delegate classified conflict discovery to the repository."""
         return self.repository.conflicted_file_descriptors(cwd)
+
+    def file_progress(self, cwd: str | Path | None = None) -> list[FileProgress]:
+        """Count the content conflicts inside every unresolved file."""
+        root = self.repository.root(cwd)
+        progress: list[FileProgress] = []
+        for descriptor in self.repository.conflicted_file_descriptors(root):
+            if descriptor.conflict_type is not ConflictType.CONTENT:
+                progress.append(FileProgress(descriptor, 0))
+                continue
+            try:
+                _snapshot, conflicts = self.load_conflicts(root / descriptor.path)
+            except (OSError, ValueError, UnicodeDecodeError):
+                # A file that cannot be parsed is reported, never resolved (RN-024).
+                progress.append(FileProgress(descriptor, 0))
+                continue
+            progress.append(FileProgress(descriptor, len(conflicts)))
+        return progress
 
     def mark_resolved(
         self, path: PathLike, cwd: str | Path | None = None
