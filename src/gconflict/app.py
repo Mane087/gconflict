@@ -22,7 +22,6 @@ from gconflict.ui.widgets.action_bar import Action, ActionBar
 from gconflict.ui.widgets.conflict_panes import ConflictPanes
 from gconflict.ui.widgets.conflict_rail import ConflictRail
 from gconflict.ui.widgets.file_sidebar import FileSidebar, SidebarEntry
-from gconflict.ui.widgets.file_tabs import FileTabs, tab_entries
 from gconflict.ui.widgets.repository_header import RepositoryHeader
 from gconflict.ui.widgets.result_pane import ResultPane
 from gconflict.ui.widgets.status_line import StatusKind, StatusLine
@@ -77,7 +76,6 @@ class GConflictApp(TokenApp):
 
     def compose(self) -> ComposeResult:
         yield RepositoryHeader()
-        yield FileTabs()
         with Horizontal(id="body"):
             yield FileSidebar()
             with Vertical(id="editor"):
@@ -94,7 +92,6 @@ class GConflictApp(TokenApp):
         self._conflicted_files = [item.file for item in self._progress]
         self.query_one(RepositoryHeader).set_context(self._repo_context)
         self._refresh_view()
-        # Tabs would otherwise take the initial focus and swallow enter/arrows.
         self.query_one(FileSidebar).query_one(ListView).focus()
 
     @on(ListView.Selected)
@@ -137,9 +134,6 @@ class GConflictApp(TokenApp):
 
     def _refresh_view(self) -> None:
         """Rebuild every widget from the current in-memory state."""
-        self.query_one(FileTabs).set_files(
-            tab_entries(self._progress, self._resolved_paths)
-        )
         sidebar = self.query_one(FileSidebar)
         sidebar.set_entries(
             [self._sidebar_entry(item) for item in self._progress],
@@ -206,7 +200,8 @@ class GConflictApp(TokenApp):
             ),
         ]
         repo_actions = [
-            Action("tab", "Siguiente archivo", "REPO"),
+            Action("up/down", "Elegir archivo", "REPO"),
+            Action("enter", "Abrir archivo", "REPO"),
             Action("q", "Salir", "REPO"),
         ]
         self.query_one(ActionBar).set_actions(

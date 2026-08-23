@@ -18,7 +18,6 @@ from gconflict.ui.widgets.action_bar import ActionBar
 from gconflict.ui.widgets.conflict_panes import ConflictPanes
 from gconflict.ui.widgets.conflict_rail import ConflictRail
 from gconflict.ui.widgets.file_sidebar import FileSidebar
-from gconflict.ui.widgets.file_tabs import FileTabs
 from gconflict.ui.widgets.repository_header import RepositoryHeader
 from gconflict.ui.widgets.result_pane import ResultPane
 from gconflict.ui.widgets.status_line import StatusLine
@@ -247,7 +246,6 @@ async def test_compose_validates_root_before_listing_and_uses_validated_root() -
 async def test_compose_renders_empty_conflict_message_exactly() -> None:
     async def assertions(_service: FakeConflictService, app: GConflictApp) -> None:
         assert app.screen.query_one(FileSidebar).rows == []
-        assert app.screen.query_one(FileTabs).labels == []
         assert app.screen.query_one(ConflictRail).rendered_text == ""
 
     await _mounted_widgets_for([], assertions)
@@ -260,9 +258,6 @@ async def test_compose_renders_conflicts_in_order_with_header_footer_and_title()
         assert app.screen.query_one(RepositoryHeader).rendered_text == (
             "gconflict / repository   MERGE   feature/x"
         )
-        assert app.screen.query_one(FileTabs).labels == [
-            "* first.txt 1", "* second.txt 1"
-        ]
         assert app.screen.query_one(FileSidebar).rows == [
             "* first.txt\n  ./\n  1 sin resolver",
             "* second.txt\n  nested/\n  1 sin resolver",
