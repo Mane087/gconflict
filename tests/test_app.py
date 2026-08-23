@@ -132,6 +132,7 @@ class FakeConflictService:
             root=Path("/validated/repository"),
             name="repository",
             branch="feature/x",
+            incoming_ref="main",
             operation=GitOperation.MERGE,
             current_label="ours - feature/x",
             incoming_label="theirs - main",
@@ -238,7 +239,7 @@ async def test_compose_validates_root_before_listing_and_uses_validated_root() -
                 Path("/Users/mane_alaniz/Documents/Visual Studio Code/git-merger"),
             ),
         ]
-        assert app.screen.query_one(FileSidebar).rows == ["* one.txt\n  ./\n  1 sin resolver"]
+        assert app.screen.query_one(FileSidebar).rows == ["● one.txt\n  ./\n  1 sin resolver"]
 
     await _mounted_widgets_for([Path("one.txt")], assertions)
 
@@ -256,11 +257,11 @@ async def test_compose_renders_conflicts_in_order_with_header_footer_and_title()
     app = GConflictApp(service=service, cwd="/workspace/subdirectory")
     async with app.run_test():
         assert app.screen.query_one(RepositoryHeader).rendered_text == (
-            "gconflict / repository   MERGE   feature/x"
+            "gconflict / repository   MERGE   feature/x <- main"
         )
         assert app.screen.query_one(FileSidebar).rows == [
-            "* first.txt\n  ./\n  1 sin resolver",
-            "* second.txt\n  nested/\n  1 sin resolver",
+            "● first.txt\n  ./\n  1 sin resolver",
+            "● second.txt\n  nested/\n  1 sin resolver",
         ]
         assert app.screen.query_one(ActionBar).rendered_text.startswith("CONFLICT")
         assert app.TITLE == "gconflict"
@@ -351,11 +352,11 @@ async def test_resolution_bindings_are_in_memory_and_persist_per_conflict() -> N
         assert app.resolutions == [Resolution.BOTH_INCOMING_FIRST, None]
         # The rail marks conflict 1 resolved (*) and conflict 2 active (O).
         assert app.screen.query_one(ConflictRail).rendered_text == (
-            "Conflict 2 / 2  *O  file.txt:1"
+            "Conflict 2 / 2  ●◉  file.txt:1   [p] [n] navegar conflictos"
         )
         await pilot.press("p")
         assert app.screen.query_one(ConflictRail).rendered_text == (
-            "Conflict 1 / 2  O.  file.txt:1"
+            "Conflict 1 / 2  ◉○  file.txt:1   [p] [n] navegar conflictos"
         )
         assert service.mutation_calls == []
 
@@ -434,7 +435,7 @@ async def test_save_is_blocked_without_snapshot_and_preserves_state_with_feedbac
             app.active_conflict_index,
         ) == initial_state
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "! No puedes guardar todavia\n  selecciona un archivo"
+            "⚠ No puedes guardar todavia\n  selecciona un archivo"
         )
 
 
@@ -463,7 +464,7 @@ async def test_save_is_blocked_until_every_conflict_has_a_resolution() -> None:
         assert app._resolution_history is history
         assert app.resolutions == [CanonicalResolution.CURRENT, None]
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "! No puedes guardar todavia\n  falta 1 de 2 conflictos sin eleccion"
+            "⚠ No puedes guardar todavia\n  falta 1 de 2 conflictos sin eleccion"
         )
 
 
@@ -479,7 +480,7 @@ async def test_repeated_save_after_success_is_blocked() -> None:
 
         assert len(service.resolve_file_calls) == 1
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "! No puedes guardar todavia\n  el archivo no tiene conflictos cargados"
+            "⚠ No puedes guardar todavia\n  el archivo no tiene conflictos cargados"
         )
 
 
@@ -492,7 +493,7 @@ async def test_save_with_no_conflicts_and_no_snapshot_is_blocked() -> None:
 
         assert service.resolve_file_calls == []
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "! No puedes guardar todavia\n  selecciona un archivo"
+            "⚠ No puedes guardar todavia\n  selecciona un archivo"
         )
 
 
@@ -522,7 +523,7 @@ async def test_save_calls_resolve_file_with_exact_state_and_clears_only_on_succe
         assert app._resolution_history == []
         assert app.active_conflict_index == 0
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "+ Guardado - file.txt\n  1 conflictos resueltos - r para hacer git add"
+            "✓ Guardado - file.txt\n  1 conflictos resueltos - r para hacer git add"
         )
 
 
@@ -550,7 +551,7 @@ async def test_save_failure_preserves_all_state_and_shows_error() -> None:
         assert app.selected_file is selected_file
         assert app.active_conflict_index == active_index
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "! Save fallo\n  disk changed"
+            "⚠ Save fallo\n  disk changed"
         )
 
 
@@ -569,7 +570,7 @@ async def test_mark_resolved_is_blocked_until_save_succeeds() -> None:
 
         assert service.mark_resolved_calls == []
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "! Marcar resuelto bloqueado\n  guarda primero con s"
+            "⚠ Marcar resuelto bloqueado\n  guarda primero con s"
         )
 
 
@@ -587,7 +588,7 @@ async def test_mark_resolved_runs_after_successful_save() -> None:
             (Path("file.txt"), "/workspace/subdirectory")
         ]
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "+ Marcado como resuelto\n  file.txt ya no aparece como conflictivo"
+            "✓ Marcado como resuelto\n  file.txt ya no aparece como conflictivo"
         )
 
 
@@ -606,7 +607,7 @@ async def test_mark_resolved_failure_shows_error_after_successful_save() -> None
             (Path("file.txt"), "/workspace/subdirectory")
         ]
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "! Marcar resuelto fallo\n  still conflicted"
+            "⚠ Marcar resuelto fallo\n  still conflicted"
         )
 
 
@@ -625,7 +626,7 @@ async def test_unsupported_conflict_blocks_loading_resolution_save_and_staging()
         assert not any(call[0] == "load_conflicts" for call in service.calls)
         assert service.mutation_calls == []
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "! Conflicto add_add - no soportado\n"
+            "⚠ Conflicto add_add - no soportado\n"
             "  1 compara las dos versiones fuera - "
             "2 deja la que quieras - 3 vuelve y marca resuelto"
         )
@@ -646,7 +647,7 @@ async def test_switching_from_content_to_unsupported_clears_content_and_shows_gu
         await pilot.press("enter")
 
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "! Conflicto modify_delete - no soportado\n"
+            "⚠ Conflicto modify_delete - no soportado\n"
             "  1 decide fuera entre borrado y version modificada - "
             "2 deja el resultado - 3 vuelve y marca resuelto"
         )
@@ -727,7 +728,7 @@ async def test_edit_unsupported_runs_editor_and_rebuilds_unsupported_state() -> 
         assert app.loaded_conflicts == []
         assert app.resolutions == []
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "! Conflicto add_add - no soportado\n"
+            "⚠ Conflicto add_add - no soportado\n"
             "  1 compara las dos versiones fuera - "
             "2 deja la que quieras - 3 vuelve y marca resuelto"
         )
@@ -749,7 +750,7 @@ async def test_edit_with_no_editor_does_not_reload_or_mutate() -> None:
 
         assert len([call for call in service.calls if call[0] == "load_conflicts"]) == len(load_calls)
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "! No encontre un editor\n  define GIT_EDITOR, VISUAL o EDITOR"
+            "⚠ No encontre un editor\n  define GIT_EDITOR, VISUAL o EDITOR"
         )
         assert service.mutation_calls == []
 
@@ -763,7 +764,7 @@ async def test_unsupported_file_explains_itself_and_keeps_only_the_editor() -> N
     async with app.run_test() as pilot:
         await pilot.press("enter")
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "! Conflicto add_add - no soportado\n"
+            "⚠ Conflicto add_add - no soportado\n"
             "  1 compara las dos versiones fuera - "
             "2 deja la que quieras - 3 vuelve y marca resuelto"
         )
@@ -800,7 +801,7 @@ async def test_last_resolved_file_reports_the_users_next_step() -> None:
         service.progress_result = []
         await pilot.press("r")
         assert app.screen.query_one(StatusLine).rendered_text == (
-            "+ Todo resuelto - 1 archivo en el index\n"
+            "✓ Todo resuelto - 1 archivo en el index\n"
             "  gconflict no hace commit: te toca git merge --continue"
         )
         assert app.screen.query_one(ActionBar).rendered_text == ""
@@ -815,6 +816,7 @@ async def test_continue_hint_follows_the_operation() -> None:
         root=Path("/validated/repository"),
         name="repository",
         branch="feature/x",
+        incoming_ref="main",
         operation=GitOperation.REBASE,
         current_label="rebased base",
         incoming_label="commit being applied",

@@ -6,6 +6,7 @@ from rich.text import Text
 from textual.widgets import Static
 
 from gconflict.models.resolution import Resolution
+from gconflict.ui import glyphs
 
 
 class ConflictRail(Static):
@@ -41,12 +42,14 @@ class ConflictRail(Static):
         text.append("  ")
         for position, resolution in enumerate(resolutions):
             if position == active:
-                text.append("O", style="#e8a44c")
+                text.append(glyphs.RAIL_ACTIVE, style="#e8a44c")
             elif resolution is not None:
-                text.append("*", style="#6fbf73")
+                text.append(glyphs.RAIL_RESOLVED, style="#6fbf73")
             else:
-                text.append(".", style="#4d5462")
+                text.append(glyphs.RAIL_PENDING, style="#4d5462")
         text.append(f"  {location}", style="#79808f")
+        text.append("   [p] [n]", style="#4d5462")
+        text.append(" navegar conflictos", style="#4d5462")
 
         self._rendered_text = text.plain
         self.update(text)

@@ -41,6 +41,7 @@ class ConflictService:
             root=root,
             name=root.name,
             branch=branch,
+            incoming_ref=incoming,
             operation=operation,
             current_label=current_label,
             incoming_label=incoming_label,

@@ -9,7 +9,14 @@ from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.widgets import Label, ListItem, ListView, Static
 
-_GLYPH_STYLES = {"*": "#e8a44c", "+": "#6fbf73", "o": "#4d5462", "!": "#d9645f"}
+from gconflict.ui import glyphs
+
+_GLYPH_STYLES = {
+    glyphs.PENDING: "#e8a44c",
+    glyphs.RESOLVED: "#6fbf73",
+    glyphs.UNTOUCHED: "#4d5462",
+    glyphs.UNSUPPORTED: "#d9645f",
+}
 
 
 @dataclass(frozen=True)
@@ -29,6 +36,12 @@ class FileSidebar(Vertical):
         width: 32;
         background: $surface-1;
         border-right: solid $line;
+    }
+    FileSidebar > #sidebar-title {
+        height: 1;
+        padding: 0 1;
+        color: $text-4;
+        text-style: bold;
     }
     FileSidebar > ListView {
         height: 1fr;
@@ -50,6 +63,7 @@ class FileSidebar(Vertical):
         self._generation = 0
 
     def compose(self) -> ComposeResult:
+        yield Static("CONFLICTED FILES", id="sidebar-title")
         yield ListView()
         yield Static("", id="sidebar-progress")
 
@@ -105,6 +119,7 @@ class FileSidebar(Vertical):
         conflicts_total: int,
         files_resolved: int,
         files_total: int,
+        staged: int = 0,
     ) -> None:
         """Replace the progress block."""
         text = Text()
@@ -112,6 +127,8 @@ class FileSidebar(Vertical):
         text.append(f"{conflicts_resolved} / {conflicts_total}", style="#a4abba")
         text.append("\narchivos ", style="#4d5462")
         text.append(f"{files_resolved} / {files_total}", style="#a4abba")
+        text.append("\nstaged   ", style="#4d5462")
+        text.append(str(staged), style="#6fbf73" if staged else "#4d5462")
         self._progress_text = text.plain
         self.query_one("#sidebar-progress", Static).update(text)
 

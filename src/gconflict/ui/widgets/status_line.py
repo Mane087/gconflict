@@ -5,6 +5,8 @@ from enum import Enum
 from rich.text import Text
 from textual.widgets import Static
 
+from gconflict.ui import glyphs
+
 
 class StatusKind(Enum):
     """Severity of a status message."""
@@ -16,10 +18,10 @@ class StatusKind(Enum):
 
 
 _GLYPHS = {
-    StatusKind.INFO: "i",
-    StatusKind.SUCCESS: "+",
-    StatusKind.WARNING: "~",
-    StatusKind.BLOCKED: "!",
+    StatusKind.INFO: glyphs.STATUS_INFO,
+    StatusKind.SUCCESS: glyphs.STATUS_SUCCESS,
+    StatusKind.WARNING: glyphs.STATUS_WARNING,
+    StatusKind.BLOCKED: glyphs.STATUS_BLOCKED,
 }
 
 _STYLES = {

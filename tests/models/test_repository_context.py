@@ -44,6 +44,7 @@ def test_context_names_itself_after_the_repository_root() -> None:
         root=Path("/work/lynxweb"),
         name="lynxweb",
         branch="feature/x",
+        incoming_ref="main",
         operation=GitOperation.MERGE,
         current_label="ours - feature/x",
         incoming_label="theirs - main",

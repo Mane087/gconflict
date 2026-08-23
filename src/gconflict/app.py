@@ -18,6 +18,7 @@ from gconflict.models.resolution import Resolution
 from gconflict.services.conflict_service import ConflictService
 from gconflict.services.editor_service import EditorService
 from gconflict.ui.tokens import TokenApp
+from gconflict.ui import glyphs
 from gconflict.ui.widgets.action_bar import Action, ActionBar
 from gconflict.ui.widgets.conflict_panes import ConflictPanes
 from gconflict.ui.widgets.conflict_rail import ConflictRail
@@ -144,6 +145,7 @@ class GConflictApp(TokenApp):
             conflicts_total=sum(item.total for item in self._progress),
             files_resolved=len(self._resolved_paths),
             files_total=len(self._progress),
+            staged=len(self._resolved_paths),
         )
         self._render_active_conflict()
         self._refresh_actions()
@@ -151,10 +153,10 @@ class GConflictApp(TokenApp):
     def _sidebar_entry(self, item: FileProgress) -> SidebarEntry:
         """Describe one file for the sidebar."""
         if not item.supported:
-            return SidebarEntry(item.file.path, "!", "no soportado")
+            return SidebarEntry(item.file.path, glyphs.UNSUPPORTED, "no soportado")
         if item.file.path in self._resolved_paths:
-            return SidebarEntry(item.file.path, "+", "guardado - staged")
-        return SidebarEntry(item.file.path, "*", f"{item.total} sin resolver")
+            return SidebarEntry(item.file.path, glyphs.RESOLVED, "guardado - staged")
+        return SidebarEntry(item.file.path, glyphs.PENDING, f"{item.total} sin resolver")
 
     def _selected_index(self) -> int | None:
         """Return the position of the selected file, highlighting the first by default."""
@@ -185,8 +187,8 @@ class GConflictApp(TokenApp):
                 "B", "Both I-C", "CONFLICT", supported,
                 active=active is Resolution.BOTH_INCOMING_FIRST,
             ),
-            Action("u", "Undo", "CONFLICT", supported),
             Action("e", "Editor externo", "CONFLICT", self.selected_file is not None),
+            Action("u", "Undo", "CONFLICT", supported),
         ]
 
         file_actions = [
@@ -282,11 +284,14 @@ class GConflictApp(TokenApp):
             self.resolutions,
             f"{self.selected_file.path}:{conflict.start_line}",
         )
+        before, after = self._context_lines(conflict)
         panes.show(
             conflict,
             self.resolutions[self.active_conflict_index],
             self._repo_context.current_label,
             self._repo_context.incoming_label,
+            before=before,
+            after=after,
         )
 
         if any(resolution is None for resolution in self.resolutions):
@@ -296,6 +301,24 @@ class GConflictApp(TokenApp):
             self.snapshot, self.loaded_conflicts, self.resolutions
         )
         result.show(text, saved=self._save_succeeded)
+
+    def _context_lines(
+        self, conflict: object, span: int = 2
+    ) -> tuple[list[str], list[str]]:
+        """Return the untouched file lines just above and below a conflict.
+
+        The snapshot is typed loosely because the UI never inspects it beyond
+        this; a snapshot without text yields no context rather than failing.
+        """
+        text = getattr(self.snapshot, "text", None)
+        if not isinstance(text, str):
+            return [], []
+        lines = text.splitlines(keepends=True)
+        start = getattr(conflict, "start_line", 0)
+        end = getattr(conflict, "end_line", 0)
+        before = lines[max(0, start - 1 - span) : start - 1]
+        after = lines[end : end + span]
+        return before, after
 
     def action_next_conflict(self) -> None:
         if self.loaded_conflicts:

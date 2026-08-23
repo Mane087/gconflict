@@ -33,6 +33,7 @@ class RepositoryContext:
     root: Path
     name: str
     branch: str | None
+    incoming_ref: str | None
     operation: GitOperation
     current_label: str
     incoming_label: str

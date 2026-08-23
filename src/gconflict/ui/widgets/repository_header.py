@@ -37,6 +37,9 @@ class RepositoryHeader(Static):
         text.append(context.operation.value.upper(), style="#e8a44c")
         text.append("   ")
         text.append(context.branch or "detached HEAD", style="#79808f")
+        if context.incoming_ref:
+            text.append(" <- ", style="#4d5462")
+            text.append(context.incoming_ref, style="#79808f")
 
         self._rendered_text = text.plain
         self.update(text)

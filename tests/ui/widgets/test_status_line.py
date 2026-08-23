@@ -26,7 +26,7 @@ async def test_blocked_status_shows_glyph_title_and_detail() -> None:
         )
         await pilot.pause()
         assert line.rendered_text == (
-            "! No puedes guardar todavia\n  el conflicto 4 de 4 sigue sin eleccion"
+            "⚠ No puedes guardar todavia\n  el conflicto 4 de 4 sigue sin eleccion"
         )
         assert line.has_class("-blocked")
 
@@ -37,7 +37,7 @@ async def test_success_status_replaces_the_previous_one() -> None:
         line.show(StatusKind.BLOCKED, "Bloqueado")
         line.show(StatusKind.SUCCESS, "Guardado - user.ex", "4 conflictos resueltos")
         await pilot.pause()
-        assert line.rendered_text == "+ Guardado - user.ex\n  4 conflictos resueltos"
+        assert line.rendered_text == "✓ Guardado - user.ex\n  4 conflictos resueltos"
         assert line.has_class("-success")
         assert not line.has_class("-blocked")
 
