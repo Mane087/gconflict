@@ -3182,6 +3182,24 @@ Después de la Tarea 16, con evidencia, no de memoria:
 - [x] En un repo con un conflicto real: resolver, `s`, `r`, y comprobar con `git status` que el archivo quedó staged y que **no** se creó ningún commit.
 - [x] `git log --oneline` no muestra commits creados por gconflict.
 
+## Trampa de Textual descubierta al ejecutar
+
+Tres bugs de este plan fueron la misma causa raíz, así que vale la pena dejarla escrita:
+
+1. **Los `clear()` de Textual eliminan de forma diferida.** `Tabs.clear()` y `ListView.clear()`
+   marcan los hijos para borrado, pero siguen presentes hasta el siguiente ciclo del message
+   pump. Justo después de un `set_files`/`set_entries` el widget contiene los hijos viejos **y**
+   los nuevos a la vez. Consecuencias: los ids chocan (`DuplicateIds`), y cualquier índice
+   posicional contra una lista paralela revienta con `IndexError`. La regla: ids con número de
+   generación, y resolver la selección **por id**, nunca por posición.
+2. **No sobrescribir nombres privados de Textual.** `self._context = ...` pisó
+   `App._context()`, un método que el message pump usa como context manager
+   (`message_pump.py:565`), y la aplicación se colgaba al arrancar sin error visible.
+   `_render` pisaba `Widget._render`. Antes de nombrar un atributo privado en una subclase de
+   `App` o `Widget`, comprobar que Textual no lo usa ya.
+3. **Textual captura `stdout` mientras la app corre**, así que un `print` de depuración dentro
+   de `run_test()` no aparece. Para depurar el arranque hay que escribir a un archivo.
+
 ## Deuda conocida que este plan no toca
 
 Anotado para que nadie lo descubra por sorpresa:

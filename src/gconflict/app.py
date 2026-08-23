@@ -99,9 +99,16 @@ class GConflictApp(TokenApp):
 
     @on(ListView.Selected)
     def file_selected(self, event: ListView.Selected) -> None:
-        if event.list_view.index is not None:
-            self.selected_file = self._conflicted_files[event.list_view.index]
-            self._reload_selected_file()
+        # Resolve through the sidebar, never by row position: ListView.clear()
+        # removes deferred, so a stale row can outlive the file it pointed at.
+        entry = self.query_one(FileSidebar).entry_for(event.item.id)
+        if entry is None:
+            return
+        for item in self._progress:
+            if item.file.path == entry.path:
+                self.selected_file = item.file
+                self._reload_selected_file()
+                return
 
     def _reload_selected_file(self) -> None:
         """Clear transient state and rebuild it from the selected file."""

@@ -45,6 +45,9 @@ class FileSidebar(Vertical):
         super().__init__()
         self._rows: list[str] = []
         self._progress_text = ""
+        self._entries: dict[str, SidebarEntry] = {}
+        self._shown: list[SidebarEntry] = []
+        self._generation = 0
 
     def compose(self) -> ComposeResult:
         yield ListView()
@@ -60,17 +63,40 @@ class FileSidebar(Vertical):
         """Return the plain text of the progress block."""
         return self._progress_text
 
+    @property
+    def item_ids(self) -> list[str]:
+        """Return the id of every row currently owned by this sidebar."""
+        return [f"row-{self._generation}-{position}" for position in range(len(self._shown))]
+
+    def entry_for(self, item_id: str | None) -> SidebarEntry | None:
+        """Return the entry behind a row, or None if the row is stale."""
+        if item_id is None:
+            return None
+        return self._entries.get(item_id)
+
     def set_entries(
         self, entries: Sequence[SidebarEntry], selected: int | None
     ) -> None:
         """Replace the file list and move the highlight."""
         listing = self.query_one(ListView)
+        if list(entries) == self._shown:
+            # Rebuilding on every refresh would churn the list and reset the highlight.
+            listing.index = selected
+            return
+
+        # ListView.clear() removes deferred, so ids must not collide across calls
+        # and stale rows must stop resolving to an entry.
         listing.clear()
+        self._generation += 1
+        self._entries = {}
+        self._shown = list(entries)
         self._rows = []
-        for entry in entries:
+        for position, entry in enumerate(entries):
             text = self._row(entry)
             self._rows.append(text.plain)
-            listing.append(ListItem(Label(text)))
+            item_id = f"row-{self._generation}-{position}"
+            self._entries[item_id] = entry
+            listing.append(ListItem(Label(text), id=item_id))
         listing.index = selected
 
     def set_progress(

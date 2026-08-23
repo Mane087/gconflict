@@ -3,6 +3,8 @@ from unittest.mock import patch
 from types import SimpleNamespace
 from collections.abc import Awaitable, Callable
 
+from textual.widgets import ListView
+
 from gconflict.ui.widgets.conflict_rail import ConflictRail
 
 from gconflict import __version__
@@ -826,3 +828,27 @@ async def test_continue_hint_follows_the_operation() -> None:
 
     async with app.run_test():
         assert app._continue_hint() == "git rebase --continue"
+
+
+async def test_selecting_a_stale_row_after_the_file_list_shrinks_does_not_crash() -> None:
+    """ListView.clear() removes deferred, so old rows outlive a shrinking refresh."""
+    service = FakeConflictService([Path("first.txt"), Path("second.txt")])
+    app = GConflictApp(service=service, cwd="/workspace/subdirectory")
+
+    async with app.run_test() as pilot:
+        sidebar = app.screen.query_one(FileSidebar)
+        stale = sidebar.item_ids[1]
+        service.progress_result = [
+            FileProgress(ConflictedFile(Path("first.txt"), ConflictType.CONTENT), 1)
+        ]
+        app._progress = service.file_progress(app.cwd)
+        app._conflicted_files = [item.file for item in app._progress]
+        app._refresh_view()
+
+        listing = sidebar.query_one(ListView)
+        listing.post_message(ListView.Selected(listing, listing.children[1], 1))
+        await pilot.pause()
+
+        assert app.selected_file is None
+        assert service.mutation_calls == []
+        assert sidebar.entry_for(stale) is None
