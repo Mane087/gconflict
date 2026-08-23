@@ -11,8 +11,10 @@ class RepositoryHeader(Static):
 
     DEFAULT_CSS = """
     RepositoryHeader {
-        height: 1;
-        padding: 0 1;
+        /* The bottom border needs its own row: with height 1 it would eat the
+           only row and the header would paint blank. */
+        height: 2;
+        padding: 0 2;
         background: $surface-2;
         border-bottom: solid $line;
     }
@@ -34,7 +36,10 @@ class RepositoryHeader(Static):
         text.append(" / ", style="#4d5462")
         text.append(context.name, style="#a4abba")
         text.append("   ")
-        text.append(context.operation.value.upper(), style="#e8a44c")
+        text.append(
+            f" {context.operation.value.upper()} ",
+            style="bold #1a1408 on #e8a44c",
+        )
         text.append("   ")
         text.append(context.branch or "detached HEAD", style="#79808f")
         if context.incoming_ref:

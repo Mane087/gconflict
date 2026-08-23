@@ -5,9 +5,6 @@ from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.widgets import Static
 
-_TITLE = "RESULT  lo que se escribira en el archivo"
-
-
 class ResultPane(Vertical):
     """Show the reconstructed file before anything touches disk."""
 
@@ -17,6 +14,15 @@ class ResultPane(Vertical):
         max-height: 12;
         background: $surface-0;
         border: solid $line;
+    }
+    ResultPane > #result-header {
+        height: 1;
+        padding: 0 2;
+        background: $surface-1;
+    }
+    ResultPane > #result-body {
+        padding: 1 2;
+        text-wrap: nowrap;
     }
     """
 
@@ -44,11 +50,12 @@ class ResultPane(Vertical):
     ) -> None:
         """Render the preview, saying whether it has been written yet."""
         header = Text()
-        header.append(_TITLE, style="#6fbf73")
-        header.append("  ")
+        header.append("RESULT", style="bold #6fbf73 on #10131a")
+        header.append("  lo que se escribira en el archivo", style="#4d5462 on #10131a")
+        header.append("   ")
         header.append(
-            "guardado" if saved else "sin guardar",
-            style="#6fbf73" if saved else "#d9645f",
+            " guardado " if saved else " sin guardar ",
+            style="bold #1a1408 on #6fbf73" if saved else "bold #1a0d0d on #d9645f",
         )
 
         lines = text.splitlines()
@@ -70,9 +77,20 @@ class ResultPane(Vertical):
         self.query_one("#result-header", Static).update(header)
         self.query_one("#result-body", Static).update(body)
 
-    def clear(self) -> None:
-        """Empty the pane."""
-        self._header_text = ""
+    def clear(self, reason: str = "") -> None:
+        """Empty the preview, keeping the header so the pane never looks broken."""
         self._body_text = ""
-        self.query_one("#result-header", Static).update("")
+        if reason:
+            header = Text()
+            header.append("RESULT", style="bold #4d5462 on #10131a")
+            header.append(
+                "  lo que se escribira en el archivo", style="#343b48 on #10131a"
+            )
+            header.append("   ")
+            header.append(f" {reason} ", style="#79808f on #232834")
+            self._header_text = header.plain
+            self.query_one("#result-header", Static).update(header)
+        else:
+            self._header_text = ""
+            self.query_one("#result-header", Static).update("")
         self.query_one("#result-body", Static).update("")

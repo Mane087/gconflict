@@ -47,7 +47,12 @@ async def test_sidebar_renders_the_progress_block() -> None:
             staged=1,
         )
         await pilot.pause()
-        assert sidebar.progress_text == "PROGRESO 3 / 8\narchivos 1 / 4\nstaged   1"
+        assert sidebar.progress_text == (
+            "PROGRESO   3 / 8\n"
+            "████████\n"
+            "archivos   1 / 4\n"
+            "staged     1"
+        )
 
 
 async def test_sidebar_survives_an_empty_file_list() -> None:

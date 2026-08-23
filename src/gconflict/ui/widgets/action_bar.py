@@ -28,7 +28,7 @@ class ActionBar(Static):
     DEFAULT_CSS = """
     ActionBar {
         height: auto;
-        padding: 0 1;
+        padding: 1 2;
         background: $surface-2;
         border-top: solid $line;
     }
@@ -67,15 +67,18 @@ class ActionBar(Static):
 
     @staticmethod
     def _append_action(text: Text, action: Action) -> None:
-        """Append one action, dimmed when it is unavailable."""
+        """Append one action as a chip: the key in its own box, then the label."""
         if not action.enabled:
-            key_style = label_style = "#4d5462"
+            key_style = "#4d5462 on #171b24"
+            label_style = "#4d5462 on #171b24"
         elif action.active:
-            key_style = label_style = "#e8a44c"
+            key_style = "bold #1a1408 on #e8a44c"
+            label_style = "#f0d3a4 on #241c10"
         else:
-            key_style, label_style = "#d6dae3", "#a4abba"
+            key_style = "bold #d6dae3 on #2e3442"
+            label_style = "#a4abba on #171b24"
 
-        text.append(f"[{action.key}]", style=key_style)
-        text.append(f" {action.label}", style=label_style)
+        text.append(f" {action.key} ", style=key_style)
+        text.append(f" {action.label} ", style=label_style)
         if action.reason:
-            text.append(f" - {action.reason}", style="#4d5462")
+            text.append(f" {action.reason}", style="#4d5462")

@@ -34,6 +34,7 @@ class GConflictApp(TokenApp):
     TITLE = "gconflict"
     CSS_PATH = "ui/app.tcss"
     BINDINGS = [
+        ("right", "next_conflict", "Next"), ("left", "previous_conflict", "Previous"),
         ("n", "next_conflict", "Next"), ("p", "previous_conflict", "Previous"),
         ("u", "undo", "Undo"),
         ("s", "save", "Save"),
@@ -141,14 +142,39 @@ class GConflictApp(TokenApp):
             selected=self._selected_index(),
         )
         sidebar.set_progress(
-            conflicts_resolved=sum(1 for item in self.resolutions if item is not None),
+            conflicts_resolved=sum(
+                1 for state in self._progress_segments() if state == "resolved"
+            ),
             conflicts_total=sum(item.total for item in self._progress),
             files_resolved=len(self._resolved_paths),
             files_total=len(self._progress),
             staged=len(self._resolved_paths),
+            segments=self._progress_segments(),
         )
         self._render_active_conflict()
         self._refresh_actions()
+
+    def _progress_segments(self) -> list[str]:
+        """Return one bar segment per conflict in the whole merge."""
+        segments: list[str] = []
+        for item in self._progress:
+            selected = (
+                self.selected_file is not None
+                and item.file.path == self.selected_file.path
+            )
+            for position in range(item.total):
+                if item.file.path in self._resolved_paths:
+                    segments.append("resolved")
+                elif selected and position < len(self.resolutions):
+                    if self.resolutions[position] is not None:
+                        segments.append("resolved")
+                    elif position == self.active_conflict_index:
+                        segments.append("active")
+                    else:
+                        segments.append("pending")
+                else:
+                    segments.append("pending")
+        return segments
 
     def _sidebar_entry(self, item: FileProgress) -> SidebarEntry:
         """Describe one file for the sidebar."""
@@ -294,8 +320,9 @@ class GConflictApp(TokenApp):
             after=after,
         )
 
-        if any(resolution is None for resolution in self.resolutions):
-            result.clear()
+        pending = sum(1 for item in self.resolutions if item is None)
+        if pending:
+            result.clear(f"faltan {pending} por resolver")
             return
         text = self.service.preview_resolution(
             self.snapshot, self.loaded_conflicts, self.resolutions

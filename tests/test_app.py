@@ -257,7 +257,7 @@ async def test_compose_renders_conflicts_in_order_with_header_footer_and_title()
     app = GConflictApp(service=service, cwd="/workspace/subdirectory")
     async with app.run_test():
         assert app.screen.query_one(RepositoryHeader).rendered_text == (
-            "gconflict / repository   MERGE   feature/x <- main"
+            "gconflict / repository    MERGE    feature/x <- main"
         )
         assert app.screen.query_one(FileSidebar).rows == [
             "● first.txt\n  ./\n  1 sin resolver",
@@ -352,11 +352,11 @@ async def test_resolution_bindings_are_in_memory_and_persist_per_conflict() -> N
         assert app.resolutions == [Resolution.BOTH_INCOMING_FIRST, None]
         # The rail marks conflict 1 resolved (*) and conflict 2 active (O).
         assert app.screen.query_one(ConflictRail).rendered_text == (
-            "Conflict 2 / 2  ●◉  file.txt:1   [p] [n] navegar conflictos"
+            "Conflict 2 / 2  ●◉  file.txt:1   [←] [→] navegar conflictos"
         )
         await pilot.press("p")
         assert app.screen.query_one(ConflictRail).rendered_text == (
-            "Conflict 1 / 2  ◉○  file.txt:1   [p] [n] navegar conflictos"
+            "Conflict 1 / 2  ◉○  file.txt:1   [←] [→] navegar conflictos"
         )
         assert service.mutation_calls == []
 
@@ -769,8 +769,8 @@ async def test_unsupported_file_explains_itself_and_keeps_only_the_editor() -> N
             "2 deja la que quieras - 3 vuelve y marca resuelto"
         )
         bar = app.screen.query_one(ActionBar).rendered_text
-        assert "[e] Editor externo" in bar
-        assert "[s] Save - tipo de conflicto no soportado" in bar
+        assert " e  Editor externo " in bar
+        assert " s  Save  tipo de conflicto no soportado" in bar
         assert app.screen.query_one(ConflictPanes).current_text == ""
         assert app.screen.query_one(ConflictRail).rendered_text == ""
         assert service.mutation_calls == []

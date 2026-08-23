@@ -22,9 +22,9 @@ async def test_action_bar_groups_actions_by_scope() -> None:
         )
         await pilot.pause()
         assert bar.rendered_text == (
-            "CONFLICT  [c] Current  [i] Incoming\n"
-            "FILE      [s] Save - faltan 1 de 4 conflictos\n"
-            "REPO      [q] Salir"
+            "CONFLICT   c  Current    i  Incoming \n"
+            "FILE       s  Save  faltan 1 de 4 conflictos\n"
+            "REPO       q  Salir "
         )
 
 
@@ -33,7 +33,7 @@ async def test_action_bar_omits_a_scope_with_no_actions() -> None:
         bar = pilot.app.query_one(ActionBar)
         bar.set_actions([Action("q", "Salir", "REPO")])
         await pilot.pause()
-        assert bar.rendered_text == "REPO      [q] Salir"
+        assert bar.rendered_text == "REPO       q  Salir "
 
 
 async def test_action_bar_preserves_the_given_order_inside_a_scope() -> None:
@@ -46,7 +46,7 @@ async def test_action_bar_preserves_the_given_order_inside_a_scope() -> None:
             ]
         )
         await pilot.pause()
-        assert bar.rendered_text == "CONFLICT  [b] Both C-I  [c] Current"
+        assert bar.rendered_text == "CONFLICT   b  Both C-I    c  Current "
 
 
 async def test_action_bar_rejects_an_unknown_scope() -> None:

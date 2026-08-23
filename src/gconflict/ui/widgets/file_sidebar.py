@@ -39,17 +39,22 @@ class FileSidebar(Vertical):
     }
     FileSidebar > #sidebar-title {
         height: 1;
-        padding: 0 1;
+        padding: 0 2;
         color: $text-4;
         text-style: bold;
     }
     FileSidebar > ListView {
         height: 1fr;
         background: $surface-1;
+        padding: 0 1;
+    }
+    FileSidebar ListItem {
+        padding: 0 1;
+        background: $surface-1;
     }
     FileSidebar > #sidebar-progress {
         height: auto;
-        padding: 1;
+        padding: 1 2;
         border-top: solid $line;
     }
     """
@@ -120,17 +125,37 @@ class FileSidebar(Vertical):
         files_resolved: int,
         files_total: int,
         staged: int = 0,
+        segments: Sequence[str] = (),
     ) -> None:
-        """Replace the progress block."""
+        """Replace the progress block.
+
+        ``segments`` carries one state per conflict — "resolved", "active" or
+        "pending" — and paints the segmented bar the design specifies.
+        """
         text = Text()
-        text.append("PROGRESO ", style="#4d5462")
-        text.append(f"{conflicts_resolved} / {conflicts_total}", style="#a4abba")
-        text.append("\narchivos ", style="#4d5462")
+        text.append("PROGRESO", style="#4d5462")
+        text.append(f"   {conflicts_resolved} / {conflicts_total}", style="#79808f")
+        text.append("\n")
+        text.append_text(self._bar(segments, conflicts_total, conflicts_resolved))
+        text.append("\narchivos   ", style="#4d5462")
         text.append(f"{files_resolved} / {files_total}", style="#a4abba")
-        text.append("\nstaged   ", style="#4d5462")
+        text.append("\nstaged     ", style="#4d5462")
         text.append(str(staged), style="#6fbf73" if staged else "#4d5462")
         self._progress_text = text.plain
         self.query_one("#sidebar-progress", Static).update(text)
+
+    @staticmethod
+    def _bar(segments: Sequence[str], total: int, resolved: int) -> Text:
+        """Paint one block per conflict: green resolved, amber active, dark pending."""
+        if not segments:
+            segments = ["resolved"] * min(resolved, total) + ["pending"] * max(
+                0, total - resolved
+            )
+        colours = {"resolved": "#6fbf73", "active": "#e8a44c", "pending": "#232834"}
+        bar = Text()
+        for state in segments:
+            bar.append("█", style=colours.get(state, "#232834"))
+        return bar
 
     @staticmethod
     def _row(entry: SidebarEntry) -> Text:

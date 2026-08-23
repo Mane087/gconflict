@@ -32,7 +32,7 @@ async def test_header_shows_repository_operation_and_branch() -> None:
         header = pilot.app.query_one(RepositoryHeader)
         header.set_context(context(GitOperation.MERGE, "feature/user-status"))
         await pilot.pause()
-        assert header.rendered_text == "gconflict / lynxweb   MERGE   feature/user-status <- main"
+        assert header.rendered_text == "gconflict / lynxweb    MERGE    feature/user-status <- main"
 
 
 async def test_header_names_a_detached_head() -> None:
@@ -40,7 +40,7 @@ async def test_header_names_a_detached_head() -> None:
         header = pilot.app.query_one(RepositoryHeader)
         header.set_context(context(GitOperation.REBASE, None))
         await pilot.pause()
-        assert header.rendered_text == "gconflict / lynxweb   REBASE   detached HEAD <- main"
+        assert header.rendered_text == "gconflict / lynxweb    REBASE    detached HEAD <- main"
 
 
 async def test_header_omits_the_arrow_without_an_incoming_reference() -> None:
@@ -48,4 +48,4 @@ async def test_header_omits_the_arrow_without_an_incoming_reference() -> None:
         header = pilot.app.query_one(RepositoryHeader)
         header.set_context(context(GitOperation.NONE, "feature/x", None))
         await pilot.pause()
-        assert header.rendered_text == "gconflict / lynxweb   NONE   feature/x"
+        assert header.rendered_text == "gconflict / lynxweb    NONE    feature/x"

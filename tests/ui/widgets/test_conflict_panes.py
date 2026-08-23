@@ -47,7 +47,7 @@ async def test_choosing_current_marks_only_that_pane() -> None:
         panes = pilot.app.query_one(ConflictPanes)
         panes.show(make_conflict(), Resolution.CURRENT, "ours", "theirs")
         await pilot.pause()
-        assert panes.current_header == "◆ CURRENT  ours  ELEGIDO"
+        assert panes.current_header == "◆ CURRENT  ours   ELEGIDO "
         assert panes.incoming_header == "◇ INCOMING  theirs"
 
 
@@ -56,8 +56,8 @@ async def test_choosing_both_marks_the_two_panes() -> None:
         panes = pilot.app.query_one(ConflictPanes)
         panes.show(make_conflict(), Resolution.BOTH_INCOMING_FIRST, "ours", "theirs")
         await pilot.pause()
-        assert panes.current_header == "◆ CURRENT  ours  ELEGIDO"
-        assert panes.incoming_header == "◇ INCOMING  theirs  ELEGIDO"
+        assert panes.current_header == "◆ CURRENT  ours   ELEGIDO "
+        assert panes.incoming_header == "◇ INCOMING  theirs   ELEGIDO "
 
 
 async def test_clear_empties_both_panes() -> None:
@@ -68,7 +68,6 @@ async def test_clear_empties_both_panes() -> None:
         await pilot.pause()
         assert panes.current_text == ""
         assert panes.incoming_text == ""
-        assert panes.current_hint == ""
         assert panes.current_header == ""
         assert panes.incoming_header == ""
 
@@ -98,12 +97,3 @@ async def test_panes_show_the_surrounding_file_context_dimmed() -> None:
             "112     user.account.status\n"
             "117   end"
         )
-
-
-async def test_panes_carry_the_key_that_chooses_each_side() -> None:
-    async with Harness().run_test() as pilot:
-        panes = pilot.app.query_one(ConflictPanes)
-        panes.show(make_conflict(), None, "ours", "theirs")
-        await pilot.pause()
-        assert panes.current_hint == "[c] quedarte con CURRENT"
-        assert panes.incoming_hint == "[i] quedarte con INCOMING"

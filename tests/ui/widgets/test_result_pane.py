@@ -14,7 +14,7 @@ async def test_result_pane_numbers_lines_and_warns_it_is_unsaved() -> None:
         pane = pilot.app.query_one(ResultPane)
         pane.show("def status do\n  user.status\nend\n", saved=False, first_line=111)
         await pilot.pause()
-        assert pane.header_text == "RESULT  lo que se escribira en el archivo  sin guardar"
+        assert pane.header_text == "RESULT  lo que se escribira en el archivo    sin guardar "
         assert pane.body_text == "111 def status do\n112   user.status\n113 end"
 
 
@@ -23,7 +23,7 @@ async def test_result_pane_reports_a_saved_file() -> None:
         pane = pilot.app.query_one(ResultPane)
         pane.show("a\n", saved=True)
         await pilot.pause()
-        assert pane.header_text == "RESULT  lo que se escribira en el archivo  guardado"
+        assert pane.header_text == "RESULT  lo que se escribira en el archivo    guardado "
 
 
 async def test_result_pane_says_when_it_truncates() -> None:
