@@ -7,8 +7,14 @@ name = "gconflict"
 version = "0.1.0"
 description = "Terminal-based Git conflict resolver"
 readme = "README.md"
+license = "Apache-2.0"
 requires-python = ">=3.13"
 dependencies = ["textual>=1.0"]
+
+[project.urls]
+Homepage = "https://github.com/Mane087/gconflict"
+Repository = "https://github.com/Mane087/gconflict"
+Issues = "https://github.com/Mane087/gconflict/issues"
 
 [project.optional-dependencies]
 dev = [
@@ -22,6 +28,9 @@ gconflict = "gconflict.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools]
+license-files = ["LICENSE.md"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
