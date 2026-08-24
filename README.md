@@ -1,5 +1,8 @@
 <img src="assets/gconflict-logo.svg" alt="Logo app">
 
+![Python](https://img.shields.io/badge/python-3.14-blue)
+![](https://img.shields.io/github/stars/mane087/gconflict.svg) ![](https://img.shields.io/github/forks/mane087/gconflict.svg) ![](https://img.shields.io/github/release/mane087/gconflict.svg) ![](https://img.shields.io/github/issues/mane087/gconflict.svg)
+
 # gconflict
 
 gconflict es una interfaz de terminal Textual para resolver conflictos de Git.
