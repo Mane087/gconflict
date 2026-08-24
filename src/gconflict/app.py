@@ -46,6 +46,7 @@ class GConflictApp(TokenApp):
         ("b", "resolve_both_current_first", "Both (Current first)"),
         ("B", "resolve_both_incoming_first", "Both (Incoming first)"),
         ("e", "edit", "Edit externally"),
+        ("l", "reload_repository", "Reload"),
     ]
 
     _CONTINUE_COMMANDS = {
@@ -259,6 +260,7 @@ class GConflictApp(TokenApp):
         repo_actions = [
             Action("up/down", "Elegir archivo", "REPO"),
             Action("enter", "Abrir archivo", "REPO"),
+            Action("l", "Reload", "REPO"),
             Action("q", "Salir", "REPO"),
         ]
         self.query_one(ActionBar).set_actions(
@@ -298,6 +300,41 @@ class GConflictApp(TokenApp):
             lambda: self.editor_service.open_file(absolute_path, root),
             thread=True,
         )
+
+    def action_reload_repository(self) -> None:
+        """Reload read-only repository state while preserving compatible work."""
+        context = self.service.context(self.cwd)
+        progress = self.service.file_progress(self.cwd)
+        selected = None
+        if self.selected_file is not None:
+            selected = next(
+                (
+                    item.file
+                    for item in progress
+                    if item.file.path == self.selected_file.path
+                    and item.file.conflict_type is self.selected_file.conflict_type
+                ),
+                None,
+            )
+
+        self._repo_context = context
+        self._progress = progress
+        self._conflicted_files = [item.file for item in progress]
+        self.query_one(RepositoryHeader).set_context(context)
+
+        if self.selected_file is not None and selected is None:
+            self.selected_file = None
+            self.snapshot = None
+            self.loaded_conflicts = []
+            self.resolutions = []
+            self._resolution_history = []
+            self.active_conflict_index = 0
+            self._save_succeeded = False
+            self.query_one(StatusLine).clear()
+        elif selected is not None:
+            self.selected_file = selected
+
+        self._refresh_view()
 
     @on(Worker.StateChanged)
     def _editor_worker_state_changed(self, event: Worker.StateChanged) -> None:
