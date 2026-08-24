@@ -21,11 +21,16 @@ async def test_action_bar_groups_actions_by_scope() -> None:
             ]
         )
         await pilot.pause()
+        assert bar.rendered_text == "▸ Actions"
+        await pilot.click(ActionBar)
         assert bar.rendered_text == (
+            "▾ Actions\n"
             "CONFLICT   c  Current    i  Incoming \n"
             "FILE       s  Save  faltan 1 de 4 conflictos\n"
             "REPO       q  Salir "
         )
+        await pilot.click(ActionBar)
+        assert bar.rendered_text == "▸ Actions"
 
 
 async def test_action_bar_omits_a_scope_with_no_actions() -> None:
@@ -33,7 +38,9 @@ async def test_action_bar_omits_a_scope_with_no_actions() -> None:
         bar = pilot.app.query_one(ActionBar)
         bar.set_actions([Action("q", "Salir", "REPO")])
         await pilot.pause()
-        assert bar.rendered_text == "REPO       q  Salir "
+        assert bar.rendered_text == "▸ Actions"
+        await pilot.click(ActionBar)
+        assert bar.rendered_text == "▾ Actions\nREPO       q  Salir "
 
 
 async def test_action_bar_preserves_the_given_order_inside_a_scope() -> None:
@@ -46,7 +53,24 @@ async def test_action_bar_preserves_the_given_order_inside_a_scope() -> None:
             ]
         )
         await pilot.pause()
-        assert bar.rendered_text == "CONFLICT   b  Both C-I    c  Current "
+        assert bar.rendered_text == "▸ Actions"
+        await pilot.click(ActionBar)
+        assert bar.rendered_text == "▾ Actions\nCONFLICT   b  Both C-I    c  Current "
+
+
+async def test_action_bar_set_actions_preserves_expanded_state() -> None:
+    async with Harness().run_test() as pilot:
+        bar = pilot.app.query_one(ActionBar)
+        bar.set_actions([Action("q", "Salir", "REPO")])
+        await pilot.click(ActionBar)
+        assert bar.rendered_text == "▾ Actions\nREPO       q  Salir "
+
+        bar.set_actions([Action("s", "Save", "FILE")])
+        assert bar.rendered_text == "▾ Actions\nFILE       s  Save "
+
+        await pilot.click(ActionBar)
+        bar.set_actions([Action("c", "Current", "CONFLICT")])
+        assert bar.rendered_text == "▸ Actions"
 
 
 async def test_action_bar_rejects_an_unknown_scope() -> None:

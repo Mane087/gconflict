@@ -75,6 +75,7 @@ class GConflictApp(TokenApp):
         self._repo_context: RepositoryContext | None = None
         self._progress: list[FileProgress] = []
         self._resolved_paths: set[Path] = set()
+        self._original_total_files = 0
 
     def compose(self) -> ComposeResult:
         yield RepositoryHeader()
@@ -91,6 +92,7 @@ class GConflictApp(TokenApp):
         """Load repository state once the widgets exist."""
         self._repo_context = self.service.context(self.cwd)
         self._progress = self.service.file_progress(self.cwd)
+        self._original_total_files = len(self._progress)
         self._conflicted_files = [item.file for item in self._progress]
         self.query_one(RepositoryHeader).set_context(self._repo_context)
         self._refresh_view()
@@ -143,8 +145,8 @@ class GConflictApp(TokenApp):
         )
         segments = self._progress_segments()
         sidebar.set_progress(
-            resolved=sum(1 for state in segments if state == "resolved"),
-            total=len(segments),
+            resolved=len(self._resolved_paths),
+            total=self._original_total_files,
             segments=segments,
         )
         self._render_active_conflict()
@@ -318,7 +320,7 @@ class GConflictApp(TokenApp):
 
         pending = sum(1 for item in self.resolutions if item is None)
         if pending:
-            result.clear(f"faltan {pending} por resolver")
+            result.clear("sin guardar" if any(item is not None for item in self.resolutions) else "")
             return
         text = self.service.preview_resolution(
             self.snapshot, self.loaded_conflicts, self.resolutions
@@ -366,10 +368,8 @@ class GConflictApp(TokenApp):
 
     def action_undo(self) -> None:
         if self.loaded_conflicts:
-            history = self._resolution_history[self.active_conflict_index]
-            if history:
-                self.resolutions[self.active_conflict_index] = history.pop()
-                self._refresh_view()
+            self.resolutions[self.active_conflict_index] = None
+            self._refresh_view()
 
     def action_save(self) -> None:
         if self._unsupported_selected():

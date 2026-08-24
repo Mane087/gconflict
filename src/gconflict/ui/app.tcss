@@ -15,3 +15,7 @@ Screen {
 .-incoming { color: $incoming; }
 .-disabled { text-style: dim; }
 .-keycap { color: $text-3; background: $surface-3; }
+
+#body {
+    margin-top: 0;
+}

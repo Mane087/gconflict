@@ -42,8 +42,9 @@ class FileSidebar(Vertical):
     DEFAULT_CSS = """
     FileSidebar {
         width: 32;
-        background: $surface-1;
+        background: $surface-2;
         border-right: solid $line;
+        border-bottom: solid $line;
     }
     FileSidebar > #sidebar-title {
         height: 1;
@@ -53,12 +54,12 @@ class FileSidebar(Vertical):
     }
     FileSidebar > ListView {
         height: 1fr;
-        background: $surface-1;
+        background: transparent;
         padding: 0 1;
     }
     FileSidebar ListItem {
         padding: 0 1;
-        background: $surface-1;
+        background: transparent;
     }
     FileSidebar > #sidebar-progress {
         height: auto;

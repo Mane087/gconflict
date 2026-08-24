@@ -263,7 +263,7 @@ async def test_compose_renders_conflicts_in_order_with_header_footer_and_title()
             "● first.txt\n  ./\n  1 sin resolver",
             "● second.txt\n  nested/\n  1 sin resolver",
         ]
-        assert app.screen.query_one(ActionBar).rendered_text.startswith("CONFLICT")
+        assert app.screen.query_one(ActionBar).rendered_text == "▸ Actions"
         assert app.TITLE == "gconflict"
 
 
@@ -361,7 +361,7 @@ async def test_resolution_bindings_are_in_memory_and_persist_per_conflict() -> N
         assert service.mutation_calls == []
 
 
-async def test_undo_restores_successive_prior_resolutions_to_none() -> None:
+async def test_undo_immediately_deselects_active_resolution() -> None:
     service = FakeConflictService([Path("file.txt")])
     app = GConflictApp(service=service, cwd="/workspace/subdirectory")
 
@@ -369,8 +369,6 @@ async def test_undo_restores_successive_prior_resolutions_to_none() -> None:
         await pilot.press("enter")
         await pilot.press("c")
         await pilot.press("i")
-        await pilot.press("u")
-        assert app.resolutions == [Resolution.CURRENT]
         await pilot.press("u")
         assert app.resolutions == [None]
         await pilot.press("u")
@@ -611,6 +609,36 @@ async def test_mark_resolved_failure_shows_error_after_successful_save() -> None
         )
 
 
+async def test_mark_resolved_keeps_original_file_total_in_progress_counter() -> None:
+    paths = [Path(f"file-{index}.txt") for index in range(5)]
+    service = FakeConflictService(paths)
+    app = GConflictApp(service=service, cwd="/workspace/subdirectory")
+
+    async with app.run_test() as pilot:
+        await pilot.press("enter")
+        await pilot.press("c")
+        await pilot.press("s")
+        service.progress_result = [FileProgress(conflict, 1) for conflict in service.conflicts[1:]]
+        await pilot.press("r")
+
+        assert app.screen.query_one(FileSidebar).progress_counter == "1 / 5"
+
+
+async def test_mark_resolved_failure_does_not_increment_progress_counter() -> None:
+    paths = [Path(f"file-{index}.txt") for index in range(5)]
+    service = FakeConflictService(paths)
+    service.mark_resolved_error = RuntimeError("still conflicted")
+    app = GConflictApp(service=service, cwd="/workspace/subdirectory")
+
+    async with app.run_test() as pilot:
+        await pilot.press("enter")
+        await pilot.press("c")
+        await pilot.press("s")
+        await pilot.press("r")
+
+        assert app.screen.query_one(FileSidebar).progress_counter == "0 / 5"
+
+
 async def test_unsupported_conflict_blocks_loading_resolution_save_and_staging() -> None:
     descriptor = ConflictedFile(Path("file.txt"), ConflictType.ADD_ADD)
     service = FakeConflictService([descriptor])
@@ -763,6 +791,7 @@ async def test_unsupported_file_explains_itself_and_keeps_only_the_editor() -> N
 
     async with app.run_test() as pilot:
         await pilot.press("enter")
+        await pilot.click(ActionBar)
         assert app.screen.query_one(StatusLine).rendered_text == (
             "⚠ Conflicto add_add - no soportado\n"
             "  1 compara las dos versiones fuera - "
@@ -804,7 +833,7 @@ async def test_last_resolved_file_reports_the_users_next_step() -> None:
             "✓ Todo resuelto - 1 archivo en el index\n"
             "  gconflict no hace commit: te toca git merge --continue"
         )
-        assert app.screen.query_one(ActionBar).rendered_text == ""
+        assert app.screen.query_one(ActionBar).rendered_text == "▸ Actions"
         assert service.mark_resolved_calls == [
             (Path("lib/user.ex"), "/workspace/subdirectory")
         ]

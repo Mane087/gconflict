@@ -50,3 +50,13 @@ async def test_clear_empties_the_pane() -> None:
         await pilot.pause()
         assert pane.header_text == ""
         assert pane.body_text == ""
+
+
+async def test_clear_with_unsaved_reason_keeps_the_result_status() -> None:
+    async with Harness().run_test() as pilot:
+        pane = pilot.app.query_one(ResultPane)
+        pane.show("a\n", saved=True)
+        pane.clear("sin guardar")
+        await pilot.pause()
+        assert pane.header_text == "RESULT  lo que se escribira en el archivo    sin guardar "
+        assert pane.body_text == ""

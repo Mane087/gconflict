@@ -12,7 +12,7 @@ class ResultPane(Vertical):
     ResultPane {
         height: auto;
         max-height: 12;
-        background: $surface-0;
+        background: $surface-2;
         border: solid $line;
     }
     ResultPane > #result-header {
@@ -78,19 +78,19 @@ class ResultPane(Vertical):
         self.query_one("#result-body", Static).update(body)
 
     def clear(self, reason: str = "") -> None:
-        """Empty the preview, keeping the header so the pane never looks broken."""
+        """Clear the preview, optionally keeping a status reason in the header."""
         self._body_text = ""
-        if reason:
-            header = Text()
-            header.append("RESULT", style="bold #4d5462 on #10131a")
-            header.append(
-                "  lo que se escribira en el archivo", style="#343b48 on #10131a"
-            )
-            header.append("   ")
-            header.append(f" {reason} ", style="#79808f on #232834")
-            self._header_text = header.plain
-            self.query_one("#result-header", Static).update(header)
-        else:
+        if not reason:
             self._header_text = ""
             self.query_one("#result-header", Static).update("")
+            self.query_one("#result-body", Static).update("")
+            return
+
+        header = Text()
+        header.append("RESULT", style="bold #6fbf73 on #10131a")
+        header.append("  lo que se escribira en el archivo", style="#4d5462 on #10131a")
+        header.append("   ")
+        header.append(" sin guardar ", style="bold #1a0d0d on #d9645f")
+        self._header_text = header.plain
+        self.query_one("#result-header", Static).update(header)
         self.query_one("#result-body", Static).update("")

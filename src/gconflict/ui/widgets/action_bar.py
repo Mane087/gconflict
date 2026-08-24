@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from rich.text import Text
+from textual.events import Click
 from textual.widgets import Static
 
 SCOPES = ("CONFLICT", "FILE", "REPO")
@@ -37,6 +38,8 @@ class ActionBar(Static):
     def __init__(self) -> None:
         super().__init__("")
         self._rendered_text = ""
+        self._actions: tuple[Action, ...] = ()
+        self._expanded = False
 
     @property
     def rendered_text(self) -> str:
@@ -49,18 +52,32 @@ class ActionBar(Static):
             if action.scope not in SCOPES:
                 raise ValueError(f"unknown action scope: {action.scope}")
 
+        self._actions = tuple(actions)
+        self._refresh_content()
+        self.refresh()
+
+    def on_click(self, event: Click) -> None:
+        """Toggle the action groups when the compact control is clicked."""
+        event.stop()
+        self._expanded = not self._expanded
+        self._refresh_content()
+        self.refresh()
+
+    def _refresh_content(self) -> None:
+        """Refresh the compact control and, when open, all action groups."""
         text = Text()
-        for scope in SCOPES:
-            in_scope = [action for action in actions if action.scope == scope]
-            if not in_scope:
-                continue
-            if text.plain:
+        text.append("▾ Actions" if self._expanded else "▸ Actions", style="bold #d6dae3")
+        if self._expanded:
+            for scope in SCOPES:
+                in_scope = [action for action in self._actions if action.scope == scope]
+                if not in_scope:
+                    continue
                 text.append("\n")
-            text.append(scope.ljust(_SCOPE_WIDTH), style="#4d5462")
-            for position, action in enumerate(in_scope):
-                if position:
-                    text.append("  ")
-                self._append_action(text, action)
+                text.append(scope.ljust(_SCOPE_WIDTH), style="#4d5462")
+                for position, action in enumerate(in_scope):
+                    if position:
+                        text.append("  ")
+                    self._append_action(text, action)
 
         self._rendered_text = text.plain
         self.update(text)
