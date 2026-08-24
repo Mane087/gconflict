@@ -20,7 +20,7 @@ class ConflictRail(Horizontal):
     ConflictRail {
         height: 1;
         padding: 0 2;
-        background: $surface-1;
+        background: $surface-2;
     }
     ConflictRail > #rail-left {
         width: 1fr;
@@ -65,6 +65,8 @@ class ConflictRail(Horizontal):
                 text.append(glyphs.RAIL_RESOLVED, style="#6fbf73")
             else:
                 text.append(glyphs.RAIL_PENDING, style="#4d5462")
+            if position < total - 1:
+                text.append(" ")
         text.append(f"  {location}", style="#79808f")
 
         self._left = text.plain

@@ -40,6 +40,19 @@ class ActionBar(Static):
         self._rendered_text = ""
         self._actions: tuple[Action, ...] = ()
         self._expanded = False
+        self._collapsible = True
+
+    @property
+    def collapsible(self) -> bool:
+        """Return whether the action groups may be collapsed."""
+        return self._collapsible
+
+    @collapsible.setter
+    def collapsible(self, value: bool) -> None:
+        self._collapsible = value
+        if not value:
+            self._expanded = True
+        self._refresh_content()
 
     @property
     def rendered_text(self) -> str:
@@ -58,6 +71,8 @@ class ActionBar(Static):
 
     def on_click(self, event: Click) -> None:
         """Toggle the action groups when the compact control is clicked."""
+        if not self._collapsible:
+            return
         event.stop()
         self._expanded = not self._expanded
         self._refresh_content()
@@ -66,18 +81,27 @@ class ActionBar(Static):
     def _refresh_content(self) -> None:
         """Refresh the compact control and, when open, all action groups."""
         text = Text()
-        text.append("▾ Actions" if self._expanded else "▸ Actions", style="bold #d6dae3")
+        if self._collapsible:
+            text.append(
+                "▾ Actions" if self._expanded else "▸ Actions",
+                style="bold #d6dae3",
+            )
         if self._expanded:
+            has_group = False
             for scope in SCOPES:
                 in_scope = [action for action in self._actions if action.scope == scope]
                 if not in_scope:
                     continue
-                text.append("\n")
+                if has_group:
+                    text.append("\n\n")
+                elif self._collapsible:
+                    text.append("\n")
                 text.append(scope.ljust(_SCOPE_WIDTH), style="#4d5462")
                 for position, action in enumerate(in_scope):
                     if position:
                         text.append("  ")
                     self._append_action(text, action)
+                has_group = True
 
         self._rendered_text = text.plain
         self.update(text)

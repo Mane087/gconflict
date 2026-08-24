@@ -38,8 +38,8 @@ async def test_panes_headers_carry_the_operation_labels() -> None:
         panes = pilot.app.query_one(ConflictPanes)
         panes.show(make_conflict(), None, "rebased base", "commit being applied")
         await pilot.pause()
-        assert panes.current_header == "◆ CURRENT  rebased base"
-        assert panes.incoming_header == "◇ INCOMING  commit being applied"
+        assert panes.current_header == "◆ CURRENT  |  rebased base"
+        assert panes.incoming_header == "◇ INCOMING  |  commit being applied"
 
 
 async def test_choosing_current_marks_only_that_pane() -> None:
@@ -47,8 +47,8 @@ async def test_choosing_current_marks_only_that_pane() -> None:
         panes = pilot.app.query_one(ConflictPanes)
         panes.show(make_conflict(), Resolution.CURRENT, "ours", "theirs")
         await pilot.pause()
-        assert panes.current_header == "◆ CURRENT  ours   ELEGIDO "
-        assert panes.incoming_header == "◇ INCOMING  theirs"
+        assert panes.current_header == "◆ CURRENT  |  ours   ELEGIDO "
+        assert panes.incoming_header == "◇ INCOMING  |  theirs"
 
 
 async def test_choosing_both_marks_the_two_panes() -> None:
@@ -56,8 +56,8 @@ async def test_choosing_both_marks_the_two_panes() -> None:
         panes = pilot.app.query_one(ConflictPanes)
         panes.show(make_conflict(), Resolution.BOTH_INCOMING_FIRST, "ours", "theirs")
         await pilot.pause()
-        assert panes.current_header == "◆ CURRENT  ours   ELEGIDO "
-        assert panes.incoming_header == "◇ INCOMING  theirs   ELEGIDO "
+        assert panes.current_header == "◆ CURRENT  |  ours   ELEGIDO "
+        assert panes.incoming_header == "◇ INCOMING  |  theirs   ELEGIDO "
 
 
 async def test_clear_empties_both_panes() -> None:

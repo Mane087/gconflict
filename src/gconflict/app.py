@@ -1,15 +1,18 @@
 """Application entrypoint for gconflict."""
 
 import argparse
+import os
 from pathlib import Path
 
 from textual.app import ComposeResult
 from textual import on
 from textual.containers import Horizontal, Vertical
+from textual.theme import BUILTIN_THEMES
 from textual.widgets import ListView
 from textual.worker import Worker, WorkerState
 
 from gconflict import __version__
+from gconflict.config import CONFIG_PATH, AppConfig, ConfigError, load_config
 from gconflict.git.operation import GitOperation
 from gconflict.models.conflicted_file import ConflictedFile, ConflictType
 from gconflict.models.file_progress import FileProgress
@@ -58,10 +61,17 @@ class GConflictApp(TokenApp):
         service: ConflictService | None = None,
         editor_service: EditorService | None = None,
         cwd: str | Path | None = None,
+        config: AppConfig | None = None,
     ) -> None:
         super().__init__()
+        self.config = config or AppConfig()
+        self.use_command_palette = self.config.show_command_palette
+        if self.config.theme is not None:
+            if self.config.theme not in self.available_themes:
+                raise ConfigError(f"theme is not registered: {self.config.theme}")
+            self.theme = self.config.theme
         self.service = service or ConflictService()
-        self.editor_service = editor_service or EditorService()
+        self.editor_service = editor_service or self._configured_editor_service()
         self.cwd = cwd
         self.selected_file: ConflictedFile | None = None
         self._conflicted_files: list[ConflictedFile] = []
@@ -77,6 +87,14 @@ class GConflictApp(TokenApp):
         self._resolved_paths: set[Path] = set()
         self._original_total_files = 0
 
+    def _configured_editor_service(self) -> EditorService:
+        """Build the default editor service with config taking precedence."""
+        if self.config.editor is None:
+            return EditorService()
+        environ = dict(os.environ)
+        environ["GIT_EDITOR"] = self.config.editor
+        return EditorService(environ=environ)
+
     def compose(self) -> ComposeResult:
         yield RepositoryHeader()
         with Horizontal(id="body"):
@@ -85,8 +103,21 @@ class GConflictApp(TokenApp):
                 yield ConflictRail()
                 yield ConflictPanes()
                 yield ResultPane()
-        yield StatusLine()
-        yield ActionBar()
+        status_line = StatusLine()
+        status_line.display = self.config.show_status_line
+        yield status_line
+        action_bar = ActionBar()
+        action_bar.collapsible = self.config.collapsible_actions
+        yield action_bar
+
+    def get_system_commands(self, screen):
+        """Hide only selected Textual system commands from the palette."""
+        hidden = {"Keys", "Maximize", "Minimize"}
+        yield from (
+            command
+            for command in super().get_system_commands(screen)
+            if command.title not in hidden
+        )
 
     def on_mount(self) -> None:
         """Load repository state once the widgets exist."""
@@ -501,6 +532,14 @@ def main() -> int:
         args = parser.parse_args()
     except SystemExit as error:
         return 0 if error.code == 0 else 4
+    try:
+        config = load_config(CONFIG_PATH)
+    except ConfigError as error:
+        print(f"Configuration error: {error}")
+        return 4
+    if config.theme is not None and config.theme not in BUILTIN_THEMES:
+        print(f"Configuration error: theme is not registered: {config.theme}")
+        return 4
     cwd = " ".join(args.directory) if args.directory else None
     service = ConflictService()
     try:
@@ -509,9 +548,15 @@ def main() -> int:
         print("Not a Git repository.")
         return 2
 
+    try:
+        app = GConflictApp(service=service, cwd=cwd, config=config)
+    except ConfigError as error:
+        print(f"Configuration error: {error}")
+        return 4
+
     if not service.conflicted_file_descriptors(root):
         print("No unresolved Git conflicts found.")
         return 0
 
-    GConflictApp(service=service, cwd=cwd).run()
+    app.run()
     return 0

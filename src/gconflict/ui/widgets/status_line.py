@@ -41,7 +41,7 @@ class StatusLine(Static):
     StatusLine {
         height: auto;
         padding: 0 1;
-        background: $surface-1;
+        background: $surface-2;
     }
     """
 

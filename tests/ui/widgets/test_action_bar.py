@@ -9,6 +9,13 @@ class Harness(TokenApp):
         yield ActionBar()
 
 
+class ExpandedHarness(TokenApp):
+    def compose(self) -> ComposeResult:
+        bar = ActionBar()
+        bar.collapsible = False
+        yield bar
+
+
 async def test_action_bar_groups_actions_by_scope() -> None:
     async with Harness().run_test() as pilot:
         bar = pilot.app.query_one(ActionBar)
@@ -26,7 +33,9 @@ async def test_action_bar_groups_actions_by_scope() -> None:
         assert bar.rendered_text == (
             "▾ Actions\n"
             "CONFLICT   c  Current    i  Incoming \n"
+            "\n"
             "FILE       s  Save  faltan 1 de 4 conflictos\n"
+            "\n"
             "REPO       q  Salir "
         )
         await pilot.click(ActionBar)
@@ -82,3 +91,14 @@ async def test_action_bar_rejects_an_unknown_scope() -> None:
             assert "BRANCH" in str(error)
         else:
             raise AssertionError("set_actions accepted an unknown scope")
+
+
+async def test_non_collapsible_action_bar_is_always_expanded_without_toggle() -> None:
+    async with ExpandedHarness().run_test() as pilot:
+        bar = pilot.app.query_one(ActionBar)
+        bar.set_actions([Action("q", "Salir", "REPO")])
+        await pilot.pause()
+
+        assert bar.rendered_text == "REPO       q  Salir "
+        await pilot.click(ActionBar)
+        assert bar.rendered_text == "REPO       q  Salir "

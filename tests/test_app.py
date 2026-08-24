@@ -9,6 +9,7 @@ from gconflict.ui.widgets.conflict_rail import ConflictRail
 
 from gconflict import __version__
 from gconflict.app import GConflictApp, Resolution, main
+from gconflict.config import AppConfig, ConfigError, load_config
 from gconflict.models.resolution import Resolution as CanonicalResolution
 from gconflict.models.conflicted_file import ConflictedFile, ConflictType
 from gconflict.git.operation import GitOperation
@@ -36,7 +37,10 @@ def test_main_returns_zero_without_running_when_no_conflicts() -> None:
     ) as app:
         with patch("sys.argv", ["gconflict", "/workspace/subdirectory"]):
             assert main() == 0
-    app.assert_not_called()
+    app.assert_called_once_with(
+        service=service, cwd="/workspace/subdirectory", config=AppConfig()
+    )
+    app.return_value.run.assert_not_called()
 
 
 def test_main_returns_two_for_invalid_repository_without_running() -> None:
@@ -77,7 +81,9 @@ def test_main_runs_app_with_directory_when_conflicts_exist() -> None:
         "gconflict.app.GConflictApp"
     ) as app, patch("sys.argv", ["gconflict", "/workspace/subdirectory"]):
         assert main() == 0
-    app.assert_called_once_with(service=service, cwd="/workspace/subdirectory")
+    app.assert_called_once_with(
+        service=service, cwd="/workspace/subdirectory", config=AppConfig()
+    )
     app.return_value.run.assert_called_once_with()
 
 
@@ -93,11 +99,133 @@ def test_main_reconstructs_spaced_directory_for_app_cwd() -> None:
     app.assert_called_once_with(
         service=service,
         cwd="/Users/mane_alaniz/Documents/Visual Studio Code/git-merger",
+        config=AppConfig(),
     )
     assert service.calls[0] == (
         "root",
         Path("/Users/mane_alaniz/Documents/Visual Studio Code/git-merger"),
     )
+
+
+def test_load_config_uses_defaults_when_file_is_absent(tmp_path: Path) -> None:
+    assert load_config(tmp_path / "missing.toml") == AppConfig()
+
+
+def test_load_config_reads_schema_and_ignores_unknown_keys(tmp_path: Path) -> None:
+    path = tmp_path / "config.toml"
+    path.write_text(
+        'editor = "code --wait"\n'
+        "collapsible_actions = false\n"
+        "show_status_line = false\n"
+        "show_command_palette = false\n"
+        'theme = "textual-light"\n'
+        'future_setting = "ignored"\n'
+    )
+
+    assert load_config(path) == AppConfig(
+        editor="code --wait",
+        collapsible_actions=False,
+        show_status_line=False,
+        show_command_palette=False,
+        theme="textual-light",
+    )
+
+
+def test_load_config_rejects_malformed_toml_and_invalid_types(tmp_path: Path) -> None:
+    malformed = tmp_path / "malformed.toml"
+    malformed.write_text('editor = "unterminated\n')
+    invalid = tmp_path / "invalid.toml"
+    invalid.write_text('show_status_line = "yes"\n')
+
+    for path in (malformed, invalid):
+        try:
+            load_config(path)
+        except ConfigError:
+            pass
+        else:
+            raise AssertionError(f"accepted invalid config: {path}")
+
+
+def test_main_returns_four_for_invalid_config_without_constructing_services_or_ui(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "config.toml"
+    path.write_text('collapsible_actions = "sometimes"\n')
+    with patch("gconflict.app.CONFIG_PATH", path), patch(
+        "gconflict.app.ConflictService"
+    ) as service, patch("gconflict.app.GConflictApp") as app, patch(
+        "builtins.print"
+    ) as printer, patch("sys.argv", ["gconflict"]):
+        assert main() == 4
+
+    printer.assert_called_once_with(
+        "Configuration error: collapsible_actions must be a boolean."
+    )
+    assert service.call_count == 0
+    app.assert_not_called()
+
+
+def test_main_returns_four_for_invalid_theme_before_non_git_preflight() -> None:
+    config = AppConfig(theme="not-a-real-theme")
+    with patch("gconflict.app.load_config", return_value=config), patch(
+        "gconflict.app.ConflictService"
+    ) as service, patch("gconflict.app.GConflictApp") as app, patch(
+        "builtins.print"
+    ) as printer, patch("sys.argv", ["gconflict", "/not-a-repository"]):
+        assert main() == 4
+
+    printer.assert_called_once_with(
+        "Configuration error: theme is not registered: not-a-real-theme"
+    )
+    assert service.call_count == 0
+    app.assert_not_called()
+
+
+async def test_app_configures_actions_status_palette_and_theme() -> None:
+    service = FakeConflictService([Path("file.txt")])
+    config = AppConfig(
+        collapsible_actions=False,
+        show_status_line=False,
+        show_command_palette=False,
+        theme="textual-light",
+    )
+    app = GConflictApp(service=service, cwd="/workspace/subdirectory", config=config)
+
+    async with app.run_test():
+        assert app.use_command_palette is False
+        assert app.theme == "textual-light"
+        assert app.screen.query_one(StatusLine).display is False
+        assert not app.screen.query_one(ActionBar).rendered_text.startswith(("▸", "▾"))
+
+
+async def test_command_palette_filters_only_requested_system_commands() -> None:
+    service = FakeConflictService([Path("file.txt")])
+    app = GConflictApp(service=service, cwd="/workspace/subdirectory")
+
+    async with app.run_test():
+        titles = {command.title for command in app.get_system_commands(app.screen)}
+        assert titles.isdisjoint({"Keys", "Maximize", "Minimize"})
+        assert {"Theme", "Quit", "Screenshot"} <= titles
+
+
+def test_app_rejects_an_unregistered_theme() -> None:
+    try:
+        GConflictApp(config=AppConfig(theme="not-a-real-theme"))
+    except ConfigError as error:
+        assert str(error) == "theme is not registered: not-a-real-theme"
+    else:
+        raise AssertionError("accepted an unregistered theme")
+
+
+def test_config_editor_takes_precedence_without_changing_injected_editor_service() -> None:
+    configured = GConflictApp(config=AppConfig(editor='code --profile "Conflicts"'))
+    injected = FakeEditorService()
+    app_with_injection = GConflictApp(
+        editor_service=injected, config=AppConfig(editor="ignored")
+    )
+
+    assert configured.editor_service.editor_argv() == ["code", "--profile", "Conflicts"]
+    assert app_with_injection.editor_service is injected
 
 
 class FakeConflictService:
@@ -352,11 +480,11 @@ async def test_resolution_bindings_are_in_memory_and_persist_per_conflict() -> N
         assert app.resolutions == [Resolution.BOTH_INCOMING_FIRST, None]
         # The rail marks conflict 1 resolved (*) and conflict 2 active (O).
         assert app.screen.query_one(ConflictRail).rendered_text == (
-            "Conflict 2 / 2  ●◉  file.txt:1   [←] [→] navegar conflictos"
+            "Conflict 2 / 2  ● ◉  file.txt:1   [←] [→] navegar conflictos"
         )
         await pilot.press("p")
         assert app.screen.query_one(ConflictRail).rendered_text == (
-            "Conflict 1 / 2  ◉○  file.txt:1   [←] [→] navegar conflictos"
+            "Conflict 1 / 2  ◉ ○  file.txt:1   [←] [→] navegar conflictos"
         )
         assert service.mutation_calls == []
 

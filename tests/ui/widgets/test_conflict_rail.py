@@ -15,7 +15,7 @@ async def test_rail_marks_active_resolved_and_pending() -> None:
         rail = pilot.app.query_one(ConflictRail)
         rail.show(1, [Resolution.CURRENT, None, None, Resolution.INCOMING], "user.ex:112")
         await pilot.pause()
-        assert rail.rendered_text == "Conflict 2 / 4  ●◉○●  user.ex:112   [←] [→] navegar conflictos"
+        assert rail.rendered_text == "Conflict 2 / 4  ● ◉ ○ ●  user.ex:112   [←] [→] navegar conflictos"
 
 
 async def test_rail_handles_a_single_conflict() -> None:

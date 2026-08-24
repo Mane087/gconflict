@@ -35,12 +35,25 @@ class ConflictPanes(Horizontal):
     ConflictPanes > Vertical {
         width: 1fr;
         background: $surface-2;
-        border: solid $line;
+        border: round $line;
     }
-    ConflictPanes > #pane-current.-selected { border: solid $current; }
-    ConflictPanes > #pane-incoming.-selected { border: solid $incoming; }
-    ConflictPanes .pane-header { height: 1; padding: 0 2; }
-    ConflictPanes .pane-body { padding: 1 2; text-wrap: nowrap; }
+    ConflictPanes > #pane-current.-selected { border: round $current; }
+    ConflictPanes > #pane-incoming.-selected { border: round $incoming; }
+    ConflictPanes .pane-header {
+        height: 2;
+        padding: 0 2;
+        background: $surface-2;
+        border-bottom: solid $line;
+    }
+    ConflictPanes > #pane-current.-selected .pane-header {
+        color: $current;
+        border-bottom: solid $current;
+    }
+    ConflictPanes > #pane-incoming.-selected .pane-header {
+        color: $incoming;
+        border-bottom: solid $incoming;
+    }
+    ConflictPanes .pane-body { padding: 1 2; text-wrap: nowrap; background: $surface-2; }
     """
 
     def __init__(self) -> None:
@@ -111,7 +124,6 @@ class ConflictPanes(Horizontal):
             accent="#e8a44c",
             gutter="#8a6b34",
             body="#f0d3a4",
-            header_bg="#1e1810",
             line_bg="#241c10",
         )
         self._render_side(
@@ -129,7 +141,6 @@ class ConflictPanes(Horizontal):
             accent="#4ca8e8",
             gutter="#35708f",
             body="#a8d6f5",
-            header_bg="#141821",
             line_bg="#10202c",
         )
 
@@ -159,30 +170,47 @@ class ConflictPanes(Horizontal):
         accent: str,
         gutter: str,
         body: str,
-        header_bg: str,
         line_bg: str,
     ) -> None:
         """Render one pane's tinted header and its body with file context."""
         header = Text()
-        header.append(f"{glyph} ", style=f"{accent} on {header_bg}")
-        header.append(title, style=f"bold {accent} on {header_bg}")
-        header.append(f"  {label}", style=f"#79808f on {header_bg}")
+        header.append(f"{glyph} ", style=accent)
+        header.append(title, style=f"bold {accent}")
+        header.append(f"  |  {label}", style="#79808f")
         if selected:
             header.append("  ")
             header.append(f" {CHOSEN} ", style=f"bold #1a1408 on {accent}")
 
         content = Text()
+        logical_content = Text()
+        body_widget = self.query_one(f"#body-{side}", Static)
+        body_width = body_widget.content_region.width
         for offset, line in enumerate(before):
             self._append_line(content, before_start + offset, line, "#343b48", "#454c5b")
+            self._append_line(logical_content, before_start + offset, line, "#343b48", "#454c5b")
         for offset, line in enumerate(lines):
             self._append_line(
-                content, body_start + offset, line, gutter, body, background=line_bg
+                content,
+                body_start + offset,
+                line,
+                gutter,
+                body,
+                background=line_bg,
+                width=body_width,
+            )
+            self._append_line(
+                logical_content,
+                body_start + offset,
+                line,
+                gutter,
+                body,
             )
         for offset, line in enumerate(after):
             self._append_line(content, after_start + offset, line, "#343b48", "#454c5b")
+            self._append_line(logical_content, after_start + offset, line, "#343b48", "#454c5b")
 
         self._headers[side] = header.plain
-        self._bodies[side] = content.plain
+        self._bodies[side] = logical_content.plain
         self.query_one(f"#header-{side}", Static).update(header)
         self.query_one(f"#body-{side}", Static).update(content)
         pane = self.query_one(f"#pane-{side}")
@@ -196,11 +224,20 @@ class ConflictPanes(Horizontal):
         gutter: str,
         body: str,
         background: str = "",
+        width: int = 0,
     ) -> None:
         """Append one numbered code line, tinted when it belongs to the conflict."""
         if content.plain:
             content.append("\n")
         suffix = f" on {background}" if background else ""
-        content.append(str(number).rjust(3), style=f"{gutter}{suffix}")
-        content.append(" ", style=f"{gutter}{suffix}")
-        content.append(line.rstrip("\r\n"), style=f"{body}{suffix}")
+        numbered_line = Text()
+        numbered_line.append(str(number).rjust(3), style=f"{gutter}{suffix}")
+        numbered_line.append(" ", style=f"{gutter}{suffix}")
+        line_without_ending = line.removesuffix("\n").removesuffix("\r")
+        numbered_line.append(line_without_ending, style=f"{body}{suffix}")
+        if background and width > numbered_line.cell_len:
+            numbered_line.append(
+                " " * (width - numbered_line.cell_len),
+                style=f"{body}{suffix}",
+            )
+        content.append_text(numbered_line)

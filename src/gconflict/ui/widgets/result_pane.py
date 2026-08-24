@@ -18,11 +18,12 @@ class ResultPane(Vertical):
     ResultPane > #result-header {
         height: 1;
         padding: 0 2;
-        background: $surface-1;
+        background: $surface-2;
     }
     ResultPane > #result-body {
         padding: 1 2;
         text-wrap: nowrap;
+        background: $surface-2;
     }
     """
 
@@ -50,8 +51,8 @@ class ResultPane(Vertical):
     ) -> None:
         """Render the preview, saying whether it has been written yet."""
         header = Text()
-        header.append("RESULT", style="bold #6fbf73 on #10131a")
-        header.append("  lo que se escribira en el archivo", style="#4d5462 on #10131a")
+        header.append("RESULT", style="bold #6fbf73")
+        header.append("  lo que se escribira en el archivo", style="#4d5462")
         header.append("   ")
         header.append(
             " guardado " if saved else " sin guardar ",
@@ -87,8 +88,8 @@ class ResultPane(Vertical):
             return
 
         header = Text()
-        header.append("RESULT", style="bold #6fbf73 on #10131a")
-        header.append("  lo que se escribira en el archivo", style="#4d5462 on #10131a")
+        header.append("RESULT", style="bold #6fbf73")
+        header.append("  lo que se escribira en el archivo", style="#4d5462")
         header.append("   ")
         header.append(" sin guardar ", style="bold #1a0d0d on #d9645f")
         self._header_text = header.plain

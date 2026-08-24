@@ -41,18 +41,57 @@ versión instalada.
 - `↑`/`↓`: seleccionar un conflicto.
 - `e`: abrir el conflicto seleccionado en un editor externo.
 - `s`: guardar el contenido editado.
-- `m`: marcar el conflicto como resuelto.
+- `r`: marcar el conflicto como resuelto.
 - `q`: salir.
 
-Guardar (`s`) y marcar como resuelto (`m`) son acciones explícitas e
-independientes. Para el editor externo se da prioridad a `VISUAL` y, si no
-está definida, a `EDITOR`.
+Guardar (`s`) y marcar como resuelto (`r`) son acciones explícitas e
+independientes. Para el editor externo se da prioridad a la configuración y
+después a `GIT_EDITOR`, `VISUAL` y `EDITOR`, en ese orden.
+
+## Configuración
+
+La configuración opcional se lee únicamente desde
+`~/.config/gconflict/config.toml`. Si el archivo no existe se usan los valores
+predeterminados; las claves desconocidas se ignoran.
+
+```toml
+# Omite editor o theme para usar null y conservar la selección automática.
+editor = "code --wait"
+collapsible_actions = true
+show_status_line = true
+show_command_palette = true
+theme = "textual-dark"
+```
+
+El esquema admite estas claves:
+
+- `editor`: string o `null` mediante omisión. Tiene prioridad sobre
+  `GIT_EDITOR`, `VISUAL` y `EDITOR`, en ese orden.
+- `collapsible_actions`: booleano, `true` por defecto. Con `false`, las acciones
+  permanecen expandidas y no muestran control para plegarlas.
+- `show_status_line`: booleano, `true` por defecto.
+- `show_command_palette`: booleano, `true` por defecto.
+- `theme`: string o `null` mediante omisión. Debe nombrar un tema registrado en
+  Textual.
+
+Otro ejemplo mínimo para ocultar elementos de la interfaz es:
+
+```toml
+collapsible_actions = false
+show_status_line = false
+show_command_palette = false
+```
+
+Un TOML mal formado, un tipo inválido o un tema no registrado produce un error
+de configuración y el código de salida `4`. Cuando la paleta está habilitada,
+gconflict oculta solo los comandos del sistema `Keys`, `Maximize` y `Minimize`;
+mantiene disponibles `Theme`, `Quit` y `Screenshot`.
 
 La aplicación emite estos códigos de salida:
 
 - `0`: ejecución completada o salida normal.
-- `2`: uso incorrecto o error al procesar los argumentos.
-- `4`: error al acceder o procesar el repositorio.
+- `2`: el directorio no es un repositorio Git.
+- `4`: argumentos inválidos o configuración inválida.
 
 ## Alcance
 
