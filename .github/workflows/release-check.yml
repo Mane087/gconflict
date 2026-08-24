@@ -1,0 +1,119 @@
+name: Release Check
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+env:
+  COVERAGE_MIN: "80"
+
+jobs:
+  release-check:
+    name: Validate release
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Validate release commit belongs to main
+        run: |
+          git fetch origin main
+
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Release tag must point to a commit contained in main."
+            exit 1
+          fi
+
+      - name: Validate tag matches package version
+        run: |
+          python <<'PY'
+          import os
+          import tomllib
+          from pathlib import Path
+
+          pyproject = Path("pyproject.toml")
+
+          with pyproject.open("rb") as file:
+              data = tomllib.load(file)
+
+          package_version = data["project"]["version"]
+          tag = os.environ["GITHUB_REF_NAME"]
+
+          expected_tag = f"v{package_version}"
+
+          print(f"Package version: {package_version}")
+          print(f"Git tag:         {tag}")
+
+          if tag != expected_tag:
+              raise SystemExit(
+                  f"Version mismatch: expected tag {expected_tag}, got {tag}"
+              )
+          PY
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "gconflict-ci"
+          git config --global user.email "gconflict-ci@users.noreply.github.com"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip install build twine
+
+      - name: Run tests with coverage
+        run: |
+          python -m pytest \
+            --cov=gconflict \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under="${COVERAGE_MIN}"
+
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: Validate package metadata
+        run: |
+          python -m twine check dist/*
+
+      - name: Smoke test wheel
+        run: |
+          python -m venv /tmp/gconflict-smoke
+
+          /tmp/gconflict-smoke/bin/python -m pip install --upgrade pip
+          /tmp/gconflict-smoke/bin/python -m pip install dist/*.whl
+
+          VERSION_OUTPUT=$(/tmp/gconflict-smoke/bin/gconflict --version)
+
+          echo "$VERSION_OUTPUT"
+
+          EXPECTED_VERSION="${GITHUB_REF_NAME#v}"
+
+          if ! echo "$VERSION_OUTPUT" | grep -Fq "$EXPECTED_VERSION"; then
+            echo "Installed CLI version does not match tag $GITHUB_REF_NAME"
+            exit 1
+          fi
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: gconflict-${{ github.ref_name }}
+          path: dist/*
+          if-no-files-found: error
