@@ -12,28 +12,34 @@ integra editores externos para editar el archivo seleccionado.
 
 ## Prerrequisitos
 
-- Python 3.13 o superior
 - Git disponible en el sistema
+- Python 3.13 o superior, solo para la instalación local con `pip`. El
+  instalador de la versión oficial provee su propio Python.
 
 ## Instalación
 
 ### Instalador de la versión oficial
 
-En macOS y Linux, con `curl`, Git y Python 3.13 o superior instalado junto
-con `venv` y `pip`, puedes instalar la versión oficial más reciente con:
+En macOS y Linux, en arquitecturas `x86_64` o `arm64`, con `curl` y Git
+disponibles, puedes instalar la versión oficial más reciente con:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Mane087/gconflict/main/scripts/install.sh | sh
 ```
 
-El instalador descarga la versión publicada en GitHub y la instala en un
-entorno virtual aislado; no utiliza PyPI. Por defecto, usa
-`~/.local/share/gconflict` para la instalación y
-`~/.local/bin/gconflict` para el ejecutable. Si `~/.local/bin` no está en tu
-`PATH`, añádelo antes de ejecutar `gconflict`.
+No necesitas tener Python instalado. El instalador descarga un `uv` privado y
+un Python gestionado por `uv` dentro del directorio de instalación, de modo que
+no depende del Python del sistema.
 
-Puedes personalizar la instalación con las variables opcionales `PYTHON`,
-`GCONFLICT_VERSION`, `GCONFLICT_HOME` y `GCONFLICT_BIN_DIR`.
+El instalador resuelve la última release publicada en GitHub e instala el
+paquete desde esa etiqueta; no utiliza PyPI. Por defecto usa
+`~/.local/share/gconflict` para la instalación y `~/.local/bin/gconflict` para
+el ejecutable. Si `~/.local/bin` no está en tu `PATH`, añádelo antes de
+ejecutar `gconflict`.
+
+Puedes personalizar la instalación con las variables opcionales
+`GCONFLICT_VERSION`, `GCONFLICT_HOME`, `GCONFLICT_BIN_DIR` y
+`GCONFLICT_PYTHON_VERSION` (por defecto, `3.13`).
 
 **Advertencia:** `curl | sh` descarga y ejecuta código remoto inmediatamente.
 Si prefieres inspeccionarlo antes, descarga el script, revísalo y ejecútalo
