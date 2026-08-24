@@ -1006,3 +1006,150 @@ async def test_selecting_a_stale_row_after_the_file_list_shrinks_does_not_crash(
         assert app.selected_file is None
         assert service.mutation_calls == []
         assert sidebar.entry_for(stale) is None
+
+
+async def test_reload_updates_repository_view_and_preserves_compatible_file_state() -> None:
+    service = FakeConflictService(
+        [Path("file.txt"), Path("other.txt"), Path("third.txt")]
+    )
+    service.loaded = (
+        "snapshot",
+        [
+            SimpleNamespace(
+                current=["ours 1\n"],
+                incoming=["theirs 1\n"],
+                index=0,
+                start_line=1,
+                end_line=5,
+            ),
+            SimpleNamespace(
+                current=["ours 2\n"],
+                incoming=["theirs 2\n"],
+                index=1,
+                start_line=6,
+                end_line=10,
+            ),
+        ],
+    )
+    app = GConflictApp(service=service, cwd="/workspace/subdirectory")
+
+    async with app.run_test() as pilot:
+        await pilot.press("enter")
+        await pilot.press("c")
+        await pilot.press("n")
+        await pilot.press("i")
+        app._save_succeeded = True
+        snapshot = app.snapshot
+        loaded_conflicts = app.loaded_conflicts
+        resolutions = app.resolutions
+        history = app._resolution_history
+        active_conflict_index = app.active_conflict_index
+        save_succeeded = app._save_succeeded
+        selected = ConflictedFile(Path("file.txt"), ConflictType.CONTENT)
+        app._resolved_paths.add(Path("already-resolved.txt"))
+        original_total = app._original_total_files
+        service.context_result = RepositoryContext(
+            root=Path("/validated/repository"),
+            name="renamed-repository",
+            branch="feature/reloaded",
+            incoming_ref="release",
+            operation=GitOperation.REBASE,
+            current_label="rebased base",
+            incoming_label="commit being applied",
+        )
+        service.progress_result = [
+            FileProgress(selected, 3),
+            FileProgress(
+                ConflictedFile(Path("added.txt"), ConflictType.ADD_ADD), 1
+            ),
+        ]
+
+        await pilot.press("l")
+
+        assert service.calls[-2:] == [
+            ("context", Path("/workspace/subdirectory")),
+            ("file_progress", Path("/workspace/subdirectory")),
+        ]
+        assert app.selected_file is selected
+        assert app.snapshot is snapshot
+        assert app.loaded_conflicts is loaded_conflicts
+        assert app.resolutions is resolutions
+        assert app._resolution_history is history
+        assert app.resolutions == [Resolution.CURRENT, Resolution.INCOMING]
+        assert app.active_conflict_index == active_conflict_index == 1
+        assert app._save_succeeded is save_succeeded is True
+        assert app._original_total_files == original_total
+        assert app._original_total_files == 3
+        assert app._resolved_paths == {Path("already-resolved.txt")}
+        header = app.screen.query_one(RepositoryHeader)
+        assert header.left_text == "\u2387  gconflict  /  renamed-repository"
+        assert header.right_text == " REBASE    feature/reloaded  \u2190  release"
+        sidebar = app.screen.query_one(FileSidebar)
+        assert sidebar.rows[0] == "● file.txt\n  ./\n  3 sin resolver"
+        assert sidebar.rows[1].endswith("added.txt\n  ./\n  no soportado")
+        assert sidebar.progress_counter == "1 / 3"
+        await pilot.click(ActionBar)
+        assert " l  Reload " in app.screen.query_one(ActionBar).rendered_text
+        assert service.mutation_calls == []
+
+
+async def test_reload_clears_state_when_selected_file_disappears_without_loading_another() -> None:
+    service = FakeConflictService([Path("file.txt"), Path("other.txt")])
+    app = GConflictApp(service=service, cwd="/workspace/subdirectory")
+
+    async with app.run_test() as pilot:
+        await pilot.press("enter")
+        await pilot.press("c")
+        load_calls = [call for call in service.calls if call[0] == "load_conflicts"]
+        service.progress_result = [
+            FileProgress(
+                ConflictedFile(Path("other.txt"), ConflictType.CONTENT), 2
+            )
+        ]
+
+        await pilot.press("l")
+
+        assert app.selected_file is None
+        assert app.snapshot is None
+        assert app.loaded_conflicts == []
+        assert app.resolutions == []
+        assert app._resolution_history == []
+        assert app.active_conflict_index == 0
+        assert app._save_succeeded is False
+        assert app.screen.query_one(ConflictRail).rendered_text == ""
+        assert app.screen.query_one(ConflictPanes).current_text == ""
+        result_pane = app.screen.query_one(ResultPane)
+        assert result_pane.header_text == ""
+        assert result_pane.body_text == ""
+        assert [call for call in service.calls if call[0] == "load_conflicts"] == load_calls
+        assert service.mutation_calls == []
+
+
+async def test_reload_invalidates_selection_when_conflict_type_changes() -> None:
+    service = FakeConflictService([Path("file.txt")])
+    app = GConflictApp(service=service, cwd="/workspace/subdirectory")
+
+    async with app.run_test() as pilot:
+        await pilot.press("enter")
+        await pilot.press("c")
+        load_calls = [call for call in service.calls if call[0] == "load_conflicts"]
+        service.progress_result = [
+            FileProgress(
+                ConflictedFile(Path("file.txt"), ConflictType.MODIFY_DELETE), 1
+            )
+        ]
+
+        await pilot.press("l")
+
+        assert app.selected_file is None
+        assert app.snapshot is None
+        assert app.loaded_conflicts == []
+        assert app.resolutions == []
+        assert app._resolution_history == []
+        assert app._save_succeeded is False
+        assert [call for call in service.calls if call[0] == "load_conflicts"] == load_calls
+        await pilot.click(ActionBar)
+        bar = app.screen.query_one(ActionBar).rendered_text
+        assert " l  Reload " in bar
+        assert " s  Save  selecciona un archivo" in bar
+        assert service.mutation_calls == []

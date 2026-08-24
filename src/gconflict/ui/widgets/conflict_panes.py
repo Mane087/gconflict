@@ -53,7 +53,13 @@ class ConflictPanes(Horizontal):
         color: $incoming;
         border-bottom: solid $incoming;
     }
-    ConflictPanes .pane-body { padding: 1 2; text-wrap: nowrap; background: $surface-2; }
+    ConflictPanes .pane-body {
+        height: 1fr;
+        padding: 1 2;
+        text-wrap: nowrap;
+        overflow-y: auto;
+        background: $surface-2;
+    }
     """
 
     def __init__(self) -> None:
