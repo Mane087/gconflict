@@ -6,10 +6,18 @@ from pathlib import Path
 
 from rich.text import Text
 from textual.app import ComposeResult
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical
 from textual.widgets import Label, ListItem, ListView, Static
 
 from gconflict.ui import glyphs
+
+_FALLBACK_WIDTH = 26
+_MAX_BLOCK = 3
+_SEGMENT_COLOURS = {
+    "resolved": "#6fbf73",
+    "active": "#e8a44c",
+    "pending": "#232834",
+}
 
 _GLYPH_STYLES = {
     glyphs.PENDING: "#e8a44c",
@@ -57,12 +65,34 @@ class FileSidebar(Vertical):
         padding: 1 2;
         border-top: solid $line;
     }
+    FileSidebar #progress-label {
+        height: 1;
+    }
+    FileSidebar #progress-title {
+        width: 1fr;
+        color: $text-4;
+        text-style: bold;
+        text-wrap: nowrap;
+    }
+    FileSidebar #progress-count {
+        width: auto;
+        color: $text-3;
+        text-align: right;
+        text-wrap: nowrap;
+    }
+    FileSidebar #progress-bar {
+        height: 1;
+        text-wrap: nowrap;
+    }
     """
 
     def __init__(self) -> None:
         super().__init__()
         self._rows: list[str] = []
         self._progress_text = ""
+        self._segments: list[str] = []
+        self._counter = ""
+        self._bar_text = ""
         self._entries: dict[str, SidebarEntry] = {}
         self._shown: list[SidebarEntry] = []
         self._generation = 0
@@ -70,7 +100,11 @@ class FileSidebar(Vertical):
     def compose(self) -> ComposeResult:
         yield Static("CONFLICTED FILES", id="sidebar-title")
         yield ListView()
-        yield Static("", id="sidebar-progress")
+        with Vertical(id="sidebar-progress"):
+            with Horizontal(id="progress-label"):
+                yield Static("PROGRESO", id="progress-title")
+                yield Static("", id="progress-count")
+            yield Static("", id="progress-bar")
 
     @property
     def rows(self) -> list[str]:
@@ -81,6 +115,16 @@ class FileSidebar(Vertical):
     def progress_text(self) -> str:
         """Return the plain text of the progress block."""
         return self._progress_text
+
+    @property
+    def progress_counter(self) -> str:
+        """Return the plain text of the counter shown beside the label."""
+        return self._counter
+
+    @property
+    def progress_bar(self) -> str:
+        """Return the plain text of the segmented bar."""
+        return self._bar_text
 
     @property
     def item_ids(self) -> list[str]:
@@ -120,41 +164,56 @@ class FileSidebar(Vertical):
 
     def set_progress(
         self,
-        conflicts_resolved: int,
-        conflicts_total: int,
-        files_resolved: int,
-        files_total: int,
-        staged: int = 0,
+        resolved: int,
+        total: int,
         segments: Sequence[str] = (),
     ) -> None:
-        """Replace the progress block.
+        """Replace the progress block: a label row and a segmented bar below it.
 
         ``segments`` carries one state per conflict — "resolved", "active" or
-        "pending" — and paints the segmented bar the design specifies.
+        "pending". Label and bar are separate widgets so the counter can never
+        be split across lines by a narrow sidebar.
         """
-        text = Text()
-        text.append("PROGRESO", style="#4d5462")
-        text.append(f"   {conflicts_resolved} / {conflicts_total}", style="#79808f")
-        text.append("\n")
-        text.append_text(self._bar(segments, conflicts_total, conflicts_resolved))
-        text.append("\narchivos   ", style="#4d5462")
-        text.append(f"{files_resolved} / {files_total}", style="#a4abba")
-        text.append("\nstaged     ", style="#4d5462")
-        text.append(str(staged), style="#6fbf73" if staged else "#4d5462")
-        self._progress_text = text.plain
-        self.query_one("#sidebar-progress", Static).update(text)
+        self._segments = list(segments)
+        self._counter = f"{resolved} / {total}"
+        self.query_one("#progress-count", Static).update(
+            Text(self._counter, style="#79808f")
+        )
+        self._paint_bar()
+
+    def on_resize(self) -> None:
+        """Repaint the bar whenever the sidebar's width changes."""
+        self._paint_bar()
+
+    def _paint_bar(self) -> None:
+        """Render the segmented bar at the width actually available."""
+        bar_widget = self.query_one("#progress-bar", Static)
+        width = bar_widget.content_size.width or _FALLBACK_WIDTH
+        bar = self._bar(self._segments, width)
+        self._bar_text = bar.plain
+        self._progress_text = f"PROGRESO {self._counter}\n{self._bar_text}"
+        bar_widget.update(bar)
 
     @staticmethod
-    def _bar(segments: Sequence[str], total: int, resolved: int) -> Text:
-        """Paint one block per conflict: green resolved, amber active, dark pending."""
-        if not segments:
-            segments = ["resolved"] * min(resolved, total) + ["pending"] * max(
-                0, total - resolved
-            )
-        colours = {"resolved": "#6fbf73", "active": "#e8a44c", "pending": "#232834"}
+    def _bar(segments: Sequence[str], width: int) -> Text:
+        """Lay one block per conflict, left to right, with a gap between them."""
         bar = Text()
-        for state in segments:
-            bar.append("█", style=colours.get(state, "#232834"))
+        count = len(segments)
+        if not count or width <= 0:
+            return bar
+
+        gap = 1 if count * 2 - 1 <= width else 0
+        usable = max(count, width - gap * (count - 1))
+        # Blocks stay narrow so a file with few conflicts does not render as a
+        # handful of oversized slabs; the bar is a status strip, not a meter.
+        block = min(_MAX_BLOCK, max(1, usable // count))
+        for position, state in enumerate(segments):
+            if position and gap:
+                bar.append(" ")
+            bar.append(
+                "\u2588" * block,
+                style=_SEGMENT_COLOURS.get(state, _SEGMENT_COLOURS["pending"]),
+            )
         return bar
 
     @staticmethod

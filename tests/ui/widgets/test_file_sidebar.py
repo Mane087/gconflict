@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from textual.app import ComposeResult
+from textual.widgets import Static
 
 from gconflict.ui.tokens import TokenApp
 from gconflict.ui.widgets.file_sidebar import FileSidebar, SidebarEntry
@@ -36,23 +37,52 @@ async def test_sidebar_marks_a_file_at_the_repository_root() -> None:
         assert sidebar.rows == ["● README.md\n  ./\n  1 sin resolver"]
 
 
-async def test_sidebar_renders_the_progress_block() -> None:
+async def test_progress_keeps_the_label_and_the_bar_in_separate_widgets() -> None:
     async with Harness().run_test() as pilot:
         sidebar = pilot.app.query_one(FileSidebar)
         sidebar.set_progress(
-            conflicts_resolved=3,
-            conflicts_total=8,
-            files_resolved=1,
-            files_total=4,
-            staged=1,
+            resolved=3,
+            total=8,
+            segments=["resolved"] * 3 + ["active"] + ["pending"] * 4,
         )
         await pilot.pause()
-        assert sidebar.progress_text == (
-            "PROGRESO   3 / 8\n"
-            "████████\n"
-            "archivos   1 / 4\n"
-            "staged     1"
-        )
+        title = sidebar.query_one("#progress-title", Static)
+        count = sidebar.query_one("#progress-count", Static)
+        bar = sidebar.query_one("#progress-bar", Static)
+        # Three widgets, each one row: the counter can never be split off.
+        assert title.content_size.height == 1
+        assert count.content_size.height == 1
+        assert bar.content_size.height == 1
+        assert sidebar.progress_counter == "3 / 8"
+
+
+async def test_progress_blocks_stay_narrow() -> None:
+    async with Harness().run_test() as pilot:
+        sidebar = pilot.app.query_one(FileSidebar)
+        sidebar.set_progress(resolved=0, total=2, segments=["active", "pending"])
+        await pilot.pause()
+        bar = sidebar.progress_bar
+        # Two conflicts must not become two slabs half a sidebar wide.
+        assert bar == "███ ███"
+
+
+async def test_progress_never_wraps_whatever_the_width() -> None:
+    async with Harness().run_test(size=(20, 12)) as pilot:
+        sidebar = pilot.app.query_one(FileSidebar)
+        sidebar.set_progress(resolved=0, total=40, segments=["pending"] * 40)
+        await pilot.pause()
+        bar_widget = sidebar.query_one("#progress-bar", Static)
+        assert " " not in sidebar.progress_bar
+        # One row, whatever the count: the bar clips instead of wrapping.
+        assert bar_widget.content_size.height == 1
+
+
+async def test_progress_with_no_conflicts_renders_an_empty_bar() -> None:
+    async with Harness().run_test() as pilot:
+        sidebar = pilot.app.query_one(FileSidebar)
+        sidebar.set_progress(resolved=0, total=0)
+        await pilot.pause()
+        assert sidebar.progress_bar == ""
 
 
 async def test_sidebar_survives_an_empty_file_list() -> None:

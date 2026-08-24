@@ -141,15 +141,11 @@ class GConflictApp(TokenApp):
             [self._sidebar_entry(item) for item in self._progress],
             selected=self._selected_index(),
         )
+        segments = self._progress_segments()
         sidebar.set_progress(
-            conflicts_resolved=sum(
-                1 for state in self._progress_segments() if state == "resolved"
-            ),
-            conflicts_total=sum(item.total for item in self._progress),
-            files_resolved=len(self._resolved_paths),
-            files_total=len(self._progress),
-            staged=len(self._resolved_paths),
-            segments=self._progress_segments(),
+            resolved=sum(1 for state in segments if state == "resolved"),
+            total=len(segments),
+            segments=segments,
         )
         self._render_active_conflict()
         self._refresh_actions()
