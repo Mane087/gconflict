@@ -256,9 +256,9 @@ async def test_compose_renders_conflicts_in_order_with_header_footer_and_title()
     service = FakeConflictService([Path("first.txt"), Path("nested/second.txt")])
     app = GConflictApp(service=service, cwd="/workspace/subdirectory")
     async with app.run_test():
-        assert app.screen.query_one(RepositoryHeader).rendered_text == (
-            "gconflict / repository    MERGE    feature/x <- main"
-        )
+        header = app.screen.query_one(RepositoryHeader)
+        assert header.left_text == "\u2387  gconflict  /  repository"
+        assert header.right_text == " MERGE    feature/x  \u2190  main"
         assert app.screen.query_one(FileSidebar).rows == [
             "● first.txt\n  ./\n  1 sin resolver",
             "● second.txt\n  nested/\n  1 sin resolver",
