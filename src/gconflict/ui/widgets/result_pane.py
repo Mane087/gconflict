@@ -21,8 +21,10 @@ class ResultPane(Vertical):
         background: $surface-2;
     }
     ResultPane > #result-body {
+        height: 1fr;
         padding: 1 2;
         text-wrap: nowrap;
+        overflow-y: auto;
         background: $surface-2;
     }
     """
