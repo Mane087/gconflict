@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gconflict"
-version = "0.1.1"
+version = "0.1.2"
 description = "Terminal-based Git conflict resolver"
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = ["textual>=1.0"]
 
 [project.urls]
