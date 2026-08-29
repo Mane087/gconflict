@@ -85,6 +85,7 @@ class GConflictApp(TokenApp):
         self._editor_worker: Worker[bool] | None = None
         self._repo_context: RepositoryContext | None = None
         self._progress: list[FileProgress] = []
+        self._baseline_progress: list[FileProgress] = []
         self._resolved_paths: set[Path] = set()
         self._original_total_files = 0
 
@@ -124,6 +125,9 @@ class GConflictApp(TokenApp):
         """Load repository state once the widgets exist."""
         self._repo_context = self.service.context(self.cwd)
         self._progress = self.service.file_progress(self.cwd)
+        # The bar spans the whole merge, so it keeps the totals seen at startup
+        # even as resolved files leave self._progress.
+        self._baseline_progress = list(self._progress)
         self._original_total_files = len(self._progress)
         self._conflicted_files = [item.file for item in self._progress]
         self.query_one(RepositoryHeader).set_context(self._repo_context)
@@ -187,7 +191,7 @@ class GConflictApp(TokenApp):
     def _progress_segments(self) -> list[str]:
         """Return one bar segment per conflict in the whole merge."""
         segments: list[str] = []
-        for item in self._progress:
+        for item in self._baseline_progress:
             selected = (
                 self.selected_file is not None
                 and item.file.path == self.selected_file.path
@@ -493,6 +497,16 @@ class GConflictApp(TokenApp):
         self._progress = self.service.file_progress(self.cwd)
         self._conflicted_files = [item.file for item in self._progress]
         if not self._progress:
+            # Nothing is selectable any more, so drop the per-file state before
+            # redrawing; _report_all_resolved then empties the action bar.
+            self.selected_file = None
+            self.snapshot = None
+            self.loaded_conflicts = []
+            self.resolutions = []
+            self._resolution_history = []
+            self.active_conflict_index = 0
+            self._save_succeeded = False
+            self._refresh_view()
             self._report_all_resolved(len(self._resolved_paths))
             return
         self.query_one(StatusLine).show(

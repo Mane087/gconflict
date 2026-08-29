@@ -121,6 +121,11 @@ environment from scratch.
 | ------------------- | -------------------------------- | --------------------------------------- |
 | `GCONFLICT_MOCK_DIR`| `<parent of repo>/gconflict-mock`| Where the mock worktree is created      |
 
+Only one mock environment can exist at a time: both branches are shared, and
+the cleanup step removes whatever worktree currently holds them, wherever it
+lives. Creating the environment in a new location therefore destroys the one
+you had before.
+
 Both scripts read the same variable, so if you create the environment somewhere
 else, pass the same value when cleaning it:
 

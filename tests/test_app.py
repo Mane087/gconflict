@@ -962,6 +962,12 @@ async def test_last_resolved_file_reports_the_users_next_step() -> None:
             "  gconflict no hace commit: te toca git merge --continue"
         )
         assert app.screen.query_one(ActionBar).rendered_text == "▸ Actions"
+        sidebar = app.screen.query_one(FileSidebar)
+        assert sidebar.rows == []
+        assert sidebar.progress_counter == "1 / 1"
+        assert app._progress_segments() == ["resolved"]
+        assert app.selected_file is None
+        assert app.screen.query_one(ConflictPanes).current_text == ""
         assert service.mark_resolved_calls == [
             (Path("lib/user.ex"), "/workspace/subdirectory")
         ]
