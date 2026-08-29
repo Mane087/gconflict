@@ -1,4 +1,5 @@
 from textual.app import ComposeResult
+from textual.containers import VerticalScroll
 
 from gconflict.ui.tokens import TokenApp
 from gconflict.ui.widgets.result_pane import ResultPane
@@ -26,12 +27,20 @@ async def test_result_pane_reports_a_saved_file() -> None:
         assert pane.header_text == "RESULT  lo que se escribira en el archivo    guardado "
 
 
-async def test_result_pane_says_when_it_truncates() -> None:
+async def test_result_pane_keeps_all_lines_for_scrolling() -> None:
     async with Harness().run_test() as pilot:
         pane = pilot.app.query_one(ResultPane)
         pane.show("".join(f"line {n}\n" for n in range(1, 11)), saved=False, max_lines=3)
         await pilot.pause()
-        assert pane.body_text == "1 line 1\n2 line 2\n3 line 3\n... 7 lineas mas"
+        body = pane.query_one("#result-body", VerticalScroll)
+        assert pane.styles.max_height.value == 12
+        assert body.max_scroll_y > 0
+        body.focus()
+        assert pane.app.focused is body
+        body.scroll_y = 1
+        assert body.scroll_y == 1
+        assert pane.body_text == "\n".join(f"{n} line {n}" for n in range(1, 11))
+        assert "... 7 lineas mas" not in pane.body_text
 
 
 async def test_result_pane_handles_an_empty_result() -> None:

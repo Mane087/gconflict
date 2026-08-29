@@ -12,3 +12,5 @@ build/
 CLAUDE.md
 
 .claude/
+.vscode/*
+.zed/*

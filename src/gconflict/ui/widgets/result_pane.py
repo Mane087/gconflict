@@ -2,7 +2,7 @@
 
 from rich.text import Text
 from textual.app import ComposeResult
-from textual.containers import Vertical
+from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Static
 
 class ResultPane(Vertical):
@@ -22,9 +22,11 @@ class ResultPane(Vertical):
     }
     ResultPane > #result-body {
         height: 1fr;
+        background: $surface-2;
+    }
+    ResultPane > #result-body > #result-content {
         padding: 1 2;
         text-wrap: nowrap;
-        overflow-y: auto;
         background: $surface-2;
     }
     """
@@ -36,7 +38,7 @@ class ResultPane(Vertical):
 
     def compose(self) -> ComposeResult:
         yield Static("", id="result-header")
-        yield Static("", id="result-body")
+        yield VerticalScroll(Static("", id="result-content"), id="result-body")
 
     @property
     def header_text(self) -> str:
@@ -66,19 +68,16 @@ class ResultPane(Vertical):
         if not lines:
             body.append("(archivo vacio)", style="#4d5462")
         else:
-            for offset, line in enumerate(lines[:max_lines]):
+            for offset, line in enumerate(lines):
                 if offset:
                     body.append("\n")
                 body.append(str(first_line + offset), style="#4d5462")
                 body.append(f" {line}", style="#d6dae3")
-            hidden = len(lines) - max_lines
-            if hidden > 0:
-                body.append(f"\n... {hidden} lineas mas", style="#4d5462")
 
         self._header_text = header.plain
         self._body_text = body.plain
         self.query_one("#result-header", Static).update(header)
-        self.query_one("#result-body", Static).update(body)
+        self.query_one("#result-content", Static).update(body)
 
     def clear(self, reason: str = "") -> None:
         """Clear the preview, optionally keeping a status reason in the header."""
@@ -86,7 +85,7 @@ class ResultPane(Vertical):
         if not reason:
             self._header_text = ""
             self.query_one("#result-header", Static).update("")
-            self.query_one("#result-body", Static).update("")
+            self.query_one("#result-content", Static).update("")
             return
 
         header = Text()
@@ -96,4 +95,4 @@ class ResultPane(Vertical):
         header.append(" sin guardar ", style="bold #1a0d0d on #d9645f")
         self._header_text = header.plain
         self.query_one("#result-header", Static).update(header)
-        self.query_one("#result-body", Static).update("")
+        self.query_one("#result-content", Static).update("")

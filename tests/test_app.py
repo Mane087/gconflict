@@ -411,8 +411,8 @@ async def test_selection_updates_selected_file() -> None:
         )
         assert app.loaded_conflicts
         assert app.screen.query_one(ConflictRail).rendered_text.startswith("Conflict 1 / 1")
-        assert app.screen.query_one(ConflictPanes).current_text == "  2 ours"
-        assert app.screen.query_one(ConflictPanes).incoming_text == "  2 theirs"
+        assert app.screen.query_one(ConflictPanes).current_text == "  1 ours"
+        assert app.screen.query_one(ConflictPanes).incoming_text == "  1 theirs"
         assert service.mutation_calls == []
 
 
@@ -434,8 +434,8 @@ async def test_navigation_updates_active_conflict_and_clamps_boundaries() -> Non
         assert app.active_conflict_index == 0
         await pilot.press("n")
         assert app.active_conflict_index == 1
-        assert app.screen.query_one(ConflictPanes).current_text == "  2 ours 2"
-        assert app.screen.query_one(ConflictPanes).incoming_text == "  2 theirs 2"
+        assert app.screen.query_one(ConflictPanes).current_text == "  1 ours 2"
+        assert app.screen.query_one(ConflictPanes).incoming_text == "  1 theirs 2"
         await pilot.press("n")
         assert app.active_conflict_index == 1
         assert service.mutation_calls == []
@@ -798,7 +798,7 @@ async def test_switching_from_content_to_unsupported_clears_content_and_shows_gu
 
     async with app.run_test() as pilot:
         await pilot.press("enter")
-        assert app.screen.query_one(ConflictPanes).current_text == "  2 ours"
+        assert app.screen.query_one(ConflictPanes).current_text == "  1 ours"
         await pilot.press("down")
         await pilot.press("enter")
 
@@ -838,7 +838,7 @@ async def test_edit_content_runs_editor_and_reloads_without_mutating_repository(
         assert app.active_conflict_index == 0
         assert app._save_succeeded is False
         assert app.screen.query_one(ConflictPanes).current_text == (
-            "  2 edited ours"
+            "  1 edited ours"
         )
         assert service.mutation_calls == []
 

@@ -28,9 +28,9 @@ async def test_panes_number_lines_from_the_conflict_start() -> None:
         panes.show(make_conflict(), None, "ours - feature/x", "theirs - main")
         await pilot.pause()
         assert panes.current_text == (
-            "112     user.status\n113     |> normalize()"
+            "111     user.status\n112     |> normalize()"
         )
-        assert panes.incoming_text == "112     user.account.status"
+        assert panes.incoming_text == "111     user.account.status"
 
 
 async def test_panes_headers_carry_the_operation_labels() -> None:
@@ -84,16 +84,17 @@ async def test_panes_show_the_surrounding_file_context_dimmed() -> None:
             after=["  end\n"],
         )
         await pilot.pause()
-        # start_line=111 and end_line=116 are the marker lines themselves, so
-        # the context keeps its real file numbering around them.
+        # Each pane numbers the file as it would look with that side chosen:
+        # the markers are gone, so the body starts at start_line and the
+        # trailing context follows the side's own length.
         assert panes.current_text == (
             "110   def status(user):\n"
-            "112     user.status\n"
-            "113     |> normalize()\n"
-            "117   end"
+            "111     user.status\n"
+            "112     |> normalize()\n"
+            "113   end"
         )
         assert panes.incoming_text == (
             "110   def status(user):\n"
-            "112     user.account.status\n"
-            "117   end"
+            "111     user.account.status\n"
+            "112   end"
         )
