@@ -202,9 +202,3 @@ La aplicación emite estos códigos de salida:
   normal.
 - `2`: el directorio no es un repositorio Git.
 - `4`: argumentos inválidos o configuración inválida.
-
-## Alcance
-
-Actualmente solo se pueden resolver conflictos `CONTENT`; otros tipos se
-identifican como no soportados. No se afirma que exista una publicación en
-PyPI ni que el paquete esté disponible allí.
